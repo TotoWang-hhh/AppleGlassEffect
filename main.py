@@ -1,3 +1,7 @@
+# Please note that this is an UNFINISHED version that is aimed to render a rounded rectangle glass effect.
+# I got stuck on calculating the distance from a specific point to the edge, as this may be out of my current knowledge base.
+# Always remember I was never a CG expert but a ordinary high-school student.
+
 import pygame
 
 import tkinter
@@ -14,14 +18,13 @@ import webbrowser
 import numpy as np
 import math
 
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageDraw
 
 class Config:
     HIGHLIGHT_DEFLECTION_HANDLED = False
     SHOW_GLASS_TOPOGRAPHY = False
     SHOW_HANDLED_ONLY = False
-    # For (most of) the output-related flag(s): Please use at your own risk as it may blow up your console.
-    OUTPUT_POINTS_EDGE_DISTANCES = False
+    OUTPUT_ROUNDED_CORNER_POINTS_DATA = False
 
 class Text(object,):
     def __init__(self, screen, text:str, color=(255, 255, 255), pos:tuple[int,int]=(0, 0), 
@@ -95,7 +98,8 @@ class Text(object,):
                 else:
                     return False
 
-def get_between(original:Union[int, float], min_value:Union[int, float], max_value:Union[int, float]):
+def get_between(original:Union[int, float], min_value:Union[int, float], 
+                max_value:Union[int, float]) -> Union[int, float]:
     if original < min_value:
         result = min_value
     elif original > max_value:
@@ -114,8 +118,8 @@ def load_image(path):
 
 def draw_all():
     width, height = [int(item*0.7) for item in win.get_size()]
-    render(width, height, 25, 5)
-    draw_rect(win, width, height)
+    render(width, height, 15, 5, 25)
+    draw_rect(win, width, height, 25)
     draw_options(win, option_buttons=option_buttons) # Draw options finally to get it on top
 
 def change_image(path):
@@ -171,25 +175,69 @@ def resize(image):
     pygame.display.set_mode((new_w, new_h))
     return resized_img
 
-def draw_rect(win, rect_w, rect_h):
+def draw_rect(win, rect_w, rect_h, radius):
     width, height = win.get_size()
     rect_x = (width - rect_w) // 2
     rect_y = (height - rect_h) // 2
-    pygame.draw.rect(win, (50, 50, 50), (rect_x, rect_y, rect_w, rect_h), 1)
+    # 绘制圆角矩形，半径为高度或宽度的1/10
+    # radius = int(min(rect_w, rect_h) * 0.1)
+    pygame.draw.rect(win, (50, 50, 50), (rect_x, rect_y, rect_w, rect_h), 1, border_radius=radius)
 
-def calc_distance_to_edge(rect_size:tuple[int, int], point:tuple[int, int]):
+rect_mask_cache = None
+rect_mask_cache_params = (-1, -1, -1)
+def get_rounded_rect_mask(width, height, radius):
+    global rect_mask_cache, rect_mask_cache_params
+    if rect_mask_cache_params == (width, height, radius):
+        return rect_mask_cache
+    # 使用PIL绘制圆角蒙版，保证与draw_rect一致
+    mask_img = Image.new("L", (width, height), 0)
+    draw = ImageDraw.Draw(mask_img)
+    draw.rounded_rectangle([0, 0, width-1, height-1], radius=radius, fill=255)
+    mask = np.array(mask_img) > 0  # shape: (height, width)
+    # Cache it!
+    rect_mask_cache = mask.copy()
+    rect_mask_cache_params = (width, height, radius)
+    return rect_mask_cache
+
+def is_in_rounded_rect(x, y, mask):
+    # 现在 mask.shape = (height, width)
+    if 0 <= y < mask.shape[0] and 0 <= x < mask.shape[1]:
+        return bool(mask[y, x])
+    return False
+
+def calc_distance_to_edge(rect_radius:int, rect_size:tuple[int, int], point:tuple[int, int]):
+    if not is_in_rounded_rect(point[0], point[1], get_rounded_rect_mask(rect_size[0], rect_size[1], rect_radius)):
+        return (0,0)
     distance_x_handleedge = min(point[0], rect_size[0] - point[0])
     distance_y_handleedge = min(point[1], rect_size[1] - point[1])
     # This place is reserved for calculating distance from the point to edge of any other shapes.
     # The function currently simply returns the distance from the point to the handling edge.
     distance_x = distance_x_handleedge
     distance_y = distance_y_handleedge
-    if Config.OUTPUT_POINTS_EDGE_DISTANCES:
-        print(f"Point {point} has distance to:")
-        print(f"  Shape edge on x: {int(distance_x)}, on y: {int(distance_y)}"+\
-               "     * Note: Shape edge refers to the edge of the region that the glass taken up.")
-        print(f"  Handle edge on x: {distance_x_handleedge}, on y: {int(distance_y_handleedge)}"+\
-               "     * Note: Handle edge refers to the edge of the rectangle region that the rendering function handles.")
+    if (point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius)) and (point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius)):
+        if distance_x_handleedge != 0:
+            distance_y = (rect_radius ** 2 - (rect_radius - distance_x_handleedge) ** 2) ** 0.5 - (rect_radius - distance_y_handleedge)
+        else:
+            distance_y = 0
+        if distance_y_handleedge != 0:
+            distance_x = (rect_radius ** 2 - (rect_radius - distance_y_handleedge) ** 2) ** 0.5 - (rect_radius - distance_x_handleedge)
+        else:
+            distance_x = 0
+    data_error = type(distance_x) not in [int, float] or type(distance_y) not in [int, float]
+    if Config.OUTPUT_ROUNDED_CORNER_POINTS_DATA or data_error:
+        if not False in [point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius),
+                         point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius),
+                         is_in_rounded_rect(point[0],point[1],get_rounded_rect_mask(rect_size[0],rect_size[1],rect_radius)),
+                        ] or data_error:
+            print(f"Point {point} has distance to:")
+            print(f"  Shape edge on x: {int(distance_x) if not data_error else distance_x}, " + \
+                  f"on y: {int(distance_y) if not data_error else distance_y}"+\
+                   "     * Note: Shape edge refers to the edge of the rounded rectangle part that the glass taken up.")
+            print(f"  Handle edge on x: {distance_x_handleedge}, on y: {int(distance_y_handleedge)}"+\
+                   "     * Note: Handle edge refers to the edge of the rectangle region that the rendering function handles.")
+            if data_error:
+                print("  * This output is due to a data error.")
+                return (0, 0)
     return (int(distance_x), int(distance_y))
 
 deflection_offset_cache = {}
@@ -208,27 +256,33 @@ def calc_deflection_offset(z_height:int, distance_to_edge:int) -> int:
     offset = int(round(offset, 0))
     return offset
 
-def render(width, height, z_height, blur_radius):
+def render(width, height, z_height, blur_radius, rect_radius):
     global win
-    ## Basic backdrop blur, written by GitHub Copilot
     win_w, win_h = win.get_size()
     base_x = (win_w - width) // 2
     base_y = (win_h - height) // 2
     base_x = max(0, base_x)
     base_y = max(0, base_y)
-    # width = min(width, win_w - x)
-    # height = min(height, win_h - y)
+    ## Basic backdrop blur, written by GitHub Copilot
     rect = pygame.Rect(base_x, base_y, width, height)
     bg_surface = win.subsurface(rect).copy()
     arr = pygame.surfarray.array3d(bg_surface)
     arr = np.transpose(arr, (1, 0, 2))
     pil_img = Image.fromarray(arr)
+    # 高斯模糊
     pil_img = pil_img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+    # 创建圆角蒙版
+    mask_img = Image.new("L", (width, height), 0)
+    draw = ImageDraw.Draw(mask_img)
+    draw.rounded_rectangle([0, 0, width-1, height-1], radius=rect_radius, fill=255)
+    pil_img.putalpha(mask_img)
+    # 转为pygame surface并绘制到窗口
     arr_blur = np.array(pil_img)
-    arr_blur = np.transpose(arr_blur, (1, 0, 2))
-    blur_surface = pygame.surfarray.make_surface(arr_blur)
+    # 直接用pygame.image.frombuffer创建surface，避免黑角问题
+    blur_surface = pygame.image.frombuffer(arr_blur.tobytes(), (width, height), "RGBA").convert_alpha()
     win.blit(blur_surface, (base_x, base_y))
     ## Deflection, the key part must be self-written :)
+    rect_mask = get_rounded_rect_mask(width, height, rect_radius)
     pixels = []
     for y in range(height):
         pixels.append([])
@@ -238,10 +292,12 @@ def render(width, height, z_height, blur_radius):
     # base_pixels = pixels # Use base_pixels to store original pixels info after blur
     for y in range(len(pixels)):
         for x in range(len(pixels[y])):
+            pixel_handled = [False, False]
             after_x = x
             after_y = y
-            distance_to_edge = calc_distance_to_edge((width, height), (x, y))
-            if y < z_height or (y > (height - z_height)):
+            distance_to_edge = calc_distance_to_edge(rect_radius, (width, height), (x, y))
+            if (y < z_height or (y > (height - z_height))) and is_in_rounded_rect(x, y, rect_mask):
+                pixel_handled[1] = True
                 try:
                     y_offset = calc_deflection_offset(z_height, distance_to_edge[1])
                     if y > (height - z_height):
@@ -251,7 +307,8 @@ def render(width, height, z_height, blur_radius):
                     y_offset = 0
                 y_offset = int(round(y_offset, 0))
                 after_y = get_between(y + y_offset, 0, height-1)
-            if x < z_height or (x > (width - z_height)):
+            if (x < z_height or (x > (width - z_height))) and is_in_rounded_rect(x, y, rect_mask):
+                pixel_handled[0] = True
                 try:
                     x_offset = calc_deflection_offset(z_height, distance_to_edge[0])
                     if x > (width - z_height):
@@ -266,20 +323,20 @@ def render(width, height, z_height, blur_radius):
             # pixels[y][x] = (0,0,255,255)
             # pixels[after_y][after_x] = (int(y * (255 / z_height)), 0, 0, 255)
             if Config.HIGHLIGHT_DEFLECTION_HANDLED:
-                pixel_handled = (y < z_height or (y > (height - z_height)), x < z_height or (x > (width - z_height)))
+                g_value = 155 if is_in_rounded_rect(x, y, rect_mask) else 0
                 if not False in pixel_handled:
-                    pixels[y][x] = (255,0,155,255)
+                    pixels[y][x] = (255,g_value,155,255)
                 elif pixel_handled[0]:
-                    pixels[y][x] = (255,0,0,255)
+                    pixels[y][x] = (255,g_value,0,255)
                 elif pixel_handled[1]:
-                    pixels[y][x] = (0,0,255,255)
+                    pixels[y][x] = (0,g_value,255,255)
             if Config.SHOW_GLASS_TOPOGRAPHY:
                 approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
                 approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                 pixels[y][x] = (int(255*approx_pixel_z_height),int(255-255*approx_pixel_z_height),0,255)
     # Draw!
     if Config.SHOW_HANDLED_ONLY:
-        win.fill((0,0,0))
+        win.fill((0,0,0,255))
     for y in range(len(pixels)):
         for x in range(len(pixels[y])):
             try:
