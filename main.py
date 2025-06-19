@@ -58,33 +58,33 @@ class Text(object,):
         rect = pygame.Rect(self.x, self.y, self.WIDTH, self.HEIGHT)
         # Code to inverse text color, written by GitHub Copilot
         try:
-            # 采样文本区域背景
+            # Sample background at text area
             sub_surface = self.screen.subsurface(rect).copy()
             arr = pygame.surfarray.array3d(sub_surface)
-            # 计算平均背景色
+            # Calc avg color
             avg_color = np.mean(arr.reshape(-1, 3), axis=0)
             r, g, b = avg_color.astype(int)
-            # 反色
+            # Invert color
             inv_r, inv_g, inv_b = 255 - r, 255 - g, 255 - b
-            # 判断亮度，必要时调整
+            # Calc lightness, and change if necessary
             lum = 0.299*inv_r + 0.587*inv_g + 0.114*inv_b
             if lum < 128 and lum > 100:
-                # 太暗则提亮
+                # If too dark
                 inv_r = min(inv_r + 150, 255)
                 inv_g = min(inv_g + 150, 255)
                 inv_b = min(inv_b + 150, 255)
             elif lum >= 128 and lum < 150:
-                # 太亮则加深
+                # If too light
                 inv_r = max(inv_r - 150, 0)
                 inv_g = max(inv_g - 150, 0)
                 inv_b = max(inv_b - 150, 0)
             text_color = (int(inv_r), int(inv_g), int(inv_b))
-            # 用反色重新渲染文本
+            # Re-render text with inverted color
             font = pygame.font.SysFont(self.fontname, self.fontsize)
             text_surface = font.render(self.text, True, text_color)
             self.screen.blit(text_surface, (self.x, self.y))
         except Exception:
-            # 回退到默认渲染
+            # If error, back to the origina; text
             self.screen.blit(self.surface, (self.x, self.y))
          
     def check_click(self, event):
@@ -179,8 +179,6 @@ def draw_rect(win, rect_w, rect_h, radius):
     width, height = win.get_size()
     rect_x = (width - rect_w) // 2
     rect_y = (height - rect_h) // 2
-    # 绘制圆角矩形，半径为高度或宽度的1/10
-    # radius = int(min(rect_w, rect_h) * 0.1)
     pygame.draw.rect(win, (50, 50, 50), (rect_x, rect_y, rect_w, rect_h), 1, border_radius=radius)
 
 rect_mask_cache = None
@@ -189,7 +187,7 @@ def get_rounded_rect_mask(width, height, radius):
     global rect_mask_cache, rect_mask_cache_params
     if rect_mask_cache_params == (width, height, radius):
         return rect_mask_cache
-    # 使用PIL绘制圆角蒙版，保证与draw_rect一致
+    # Use PIL to draw mask
     mask_img = Image.new("L", (width, height), 0)
     draw = ImageDraw.Draw(mask_img)
     draw.rounded_rectangle([0, 0, width-1, height-1], radius=radius, fill=255)
@@ -269,16 +267,15 @@ def render(width, height, z_height, blur_radius, rect_radius):
     arr = pygame.surfarray.array3d(bg_surface)
     arr = np.transpose(arr, (1, 0, 2))
     pil_img = Image.fromarray(arr)
-    # 高斯模糊
+    # Blur
     pil_img = pil_img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
-    # 创建圆角蒙版
+    # Round corner mask
     mask_img = Image.new("L", (width, height), 0)
     draw = ImageDraw.Draw(mask_img)
     draw.rounded_rectangle([0, 0, width-1, height-1], radius=rect_radius, fill=255)
     pil_img.putalpha(mask_img)
-    # 转为pygame surface并绘制到窗口
+    # Convert to pygame surface and draw
     arr_blur = np.array(pil_img)
-    # 直接用pygame.image.frombuffer创建surface，避免黑角问题
     blur_surface = pygame.image.frombuffer(arr_blur.tobytes(), (width, height), "RGBA").convert_alpha()
     win.blit(blur_surface, (base_x, base_y))
     ## Deflection, the key part must be self-written :)
@@ -334,7 +331,7 @@ def render(width, height, z_height, blur_radius, rect_radius):
                 approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
                 approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                 pixels[y][x] = (int(255*approx_pixel_z_height),int(255-255*approx_pixel_z_height),0,255)
-    # Draw!
+    ## Draw!
     if Config.SHOW_HANDLED_ONLY:
         win.fill((0,0,0,255))
     for y in range(len(pixels)):
