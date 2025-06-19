@@ -22,9 +22,9 @@ from PIL import Image, ImageFilter, ImageDraw
 
 class Config:
     HIGHLIGHT_DEFLECTION_HANDLED = False
-    SHOW_GLASS_TOPOGRAPHIC = True
+    SHOW_GLASS_TOPOGRAPHY = False
     SHOW_HANDLED_ONLY = False
-    OUTPUT_ROUNDED_CORNER_POINTS_DATA = True
+    OUTPUT_ROUNDED_CORNER_POINTS_DATA = False
 
 class Text(object,):
     def __init__(self, screen, text:str, color=(255, 255, 255), pos:tuple[int,int]=(0, 0), 
@@ -184,10 +184,10 @@ def draw_rect(win, rect_w, rect_h, radius):
     pygame.draw.rect(win, (50, 50, 50), (rect_x, rect_y, rect_w, rect_h), 1, border_radius=radius)
 
 rect_mask_cache = None
-rect_mask_cache_radius = -1
+rect_mask_cache_params = (-1, -1, -1)
 def get_rounded_rect_mask(width, height, radius):
-    global rect_mask_cache, rect_mask_cache_radius
-    if rect_mask_cache_radius == radius:
+    global rect_mask_cache, rect_mask_cache_params
+    if rect_mask_cache_params == (width, height, radius):
         return rect_mask_cache
     # 使用PIL绘制圆角蒙版，保证与draw_rect一致
     mask_img = Image.new("L", (width, height), 0)
@@ -196,7 +196,7 @@ def get_rounded_rect_mask(width, height, radius):
     mask = np.array(mask_img) > 0  # shape: (height, width)
     # Cache it!
     rect_mask_cache = mask.copy()
-    rect_mask_cache_radius = radius
+    rect_mask_cache_params = (width, height, radius)
     return rect_mask_cache
 
 def is_in_rounded_rect(x, y, mask):
@@ -206,27 +206,38 @@ def is_in_rounded_rect(x, y, mask):
     return False
 
 def calc_distance_to_edge(rect_radius:int, rect_size:tuple[int, int], point:tuple[int, int]):
-    distance_x_handleedge = point[0]
-    distance_y_handleedge = point[1]
-    if point[0] > (rect_size[0] - rect_radius):
-        distance_x_handleedge = rect_size[0] - point[0]
-    if point[1] > (rect_size[1] - rect_radius):
-        distance_y_handleedge = rect_size[1] - point[1]
+    if not is_in_rounded_rect(point[0], point[1], get_rounded_rect_mask(rect_size[0], rect_size[1], rect_radius)):
+        return (0,0)
+    distance_x_handleedge = min(point[0], rect_size[0] - point[0])
+    distance_y_handleedge = min(point[1], rect_size[1] - point[1])
+    # This place is reserved for calculating distance from the point to edge of any other shapes.
+    # The function currently simply returns the distance from the point to the handling edge.
     distance_x = distance_x_handleedge
     distance_y = distance_y_handleedge
-    if point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius):
-        distance_y = (rect_radius ** 2 - (rect_radius - distance_x_handleedge) ** 2) ** 0.5
-    if point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius):
-        distance_x = (rect_radius ** 2 - (rect_radius - distance_y_handleedge) ** 2) ** 0.5
-    if Config.OUTPUT_ROUNDED_CORNER_POINTS_DATA:
+    if (point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius)) and (point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius)):
+        if distance_x_handleedge != 0:
+            distance_y = (rect_radius ** 2 - (rect_radius - distance_x_handleedge) ** 2) ** 0.5 - (rect_radius - distance_y_handleedge)
+        else:
+            distance_y = 0
+        if distance_y_handleedge != 0:
+            distance_x = (rect_radius ** 2 - (rect_radius - distance_y_handleedge) ** 2) ** 0.5 - (rect_radius - distance_x_handleedge)
+        else:
+            distance_x = 0
+    data_error = type(distance_x) not in [int, float] or type(distance_y) not in [int, float]
+    if Config.OUTPUT_ROUNDED_CORNER_POINTS_DATA or data_error:
         if not False in [point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius),
                          point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius),
-                         is_in_rounded_rect(point[0],point[1],get_rounded_rect_mask(rect_size[0],rect_size[1],rect_radius))]:
+                         is_in_rounded_rect(point[0],point[1],get_rounded_rect_mask(rect_size[0],rect_size[1],rect_radius)),
+                        ] or data_error:
             print(f"Point {point} has distance to:")
-            print(f"  Shape edge on x: {int(distance_x)}, on y: {int(distance_y)}"+\
-                  "     * Note: Shape edge refers to the edge of the rounded rectangle part that the glass taken up.")
+            print(f"  Shape edge on x: {int(distance_x) if not data_error else distance_x}, " + \
+                  f"on y: {int(distance_y) if not data_error else distance_y}"+\
+                   "     * Note: Shape edge refers to the edge of the rounded rectangle part that the glass taken up.")
             print(f"  Handle edge on x: {distance_x_handleedge}, on y: {int(distance_y_handleedge)}"+\
-                  "     * Note: Handle edge refers to the edge of the rectangle region that the rendering function handles.")
+                   "     * Note: Handle edge refers to the edge of the rectangle region that the rendering function handles.")
+            if data_error:
+                print("  * This output is due to a data error.")
+                return (0, 0)
     return (int(distance_x), int(distance_y))
 
 deflection_offset_cache = {}
@@ -319,7 +330,7 @@ def render(width, height, z_height, blur_radius, rect_radius):
                     pixels[y][x] = (255,g_value,0,255)
                 elif pixel_handled[1]:
                     pixels[y][x] = (0,g_value,255,255)
-            if Config.SHOW_GLASS_TOPOGRAPHIC:
+            if Config.SHOW_GLASS_TOPOGRAPHY:
                 approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
                 approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                 pixels[y][x] = (int(255*approx_pixel_z_height),int(255-255*approx_pixel_z_height),0,255)

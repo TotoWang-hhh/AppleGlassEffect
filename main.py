@@ -18,7 +18,7 @@ from PIL import Image, ImageFilter
 
 class Config:
     HIGHLIGHT_DEFLECTION_HANDLED = False
-    SHOW_GLASS_TOPOGRAPHIC = False
+    SHOW_GLASS_TOPOGRAPHY = False
     SHOW_HANDLED_ONLY = False
     # For (most of) the output-related flag(s): Please use at your own risk as it may blow up your console.
     OUTPUT_POINTS_EDGE_DISTANCES = False
@@ -273,7 +273,7 @@ def render(width, height, z_height, blur_radius):
                     pixels[y][x] = (255,0,0,255)
                 elif pixel_handled[1]:
                     pixels[y][x] = (0,0,255,255)
-            if Config.SHOW_GLASS_TOPOGRAPHIC:
+            if Config.SHOW_GLASS_TOPOGRAPHY:
                 approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
                 approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                 pixels[y][x] = (int(255*approx_pixel_z_height),int(255-255*approx_pixel_z_height),0,255)
