@@ -12,7 +12,7 @@ Please always note that I am never a CG expert, but an ordinary grade 10 student
 
 ## Known Issue(s)
 
-It is already known that the algorithm of the defeaction offset is not fully correct (due to errors while calculations and derivation). One of the most effecient solution is to use a simplier function to express the offset, and simulate the effect without considering any other physical facts. This will be tried once the project is confirmed to be continued.
+It is already known that the algorithm of the defeaction offset is not fully correct (due to errors while calculations and derivation). One of the most effecient solutions is to use a simplier function to express the offset, and simulate the effect without considering any other physical facts. This will be tried once the project is confirmed to be continued.
 
 Also, beyong the basic blur and deflection effect, the edge diffussion effect is not completed until now. It will be completed once the project is decided to be continued. 
 
