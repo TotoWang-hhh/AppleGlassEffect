@@ -12,10 +12,10 @@ Please always note that I am never a CG expert, but an ordinary grade 10 student
 
 ## Known Issue(s)
 
-It is already known that the algorithm of the defeaction offset is not fully correct (due to errors while calculations and derivation). One of the most effecient solutions is to use a simplier function to express the offset, and simulate the effect without considering any other physical facts. This will be tried once the project is confirmed to be continued.
+It is already known that the algorithm of the deflection offset is not fully correct (due to errors while calculations and derivation). One of the most efficient solutions is to use a simpler function to express the offset, and simulate the effect without considering any other physical facts. Just for confirmation, a comparison will be carried out between the two methods to see if they really look similar.
 
-Also, beyond the basic blur and deflection effect, the edge diffussion effect is not completed until now. It will be completed once the project is decided to be continued. 
+Also, beyond the basic blur and deflection effect, the edge diffusion effect is not completed until now. It will be completed once the project is decided to be continued. 
 
 ## Is The Project Discontinued?
 
-**It is, temporarily.** I am currently putting my effort into totowang-hhh/AppleGlassEffectWeb, which has the same aim with this project, but is expected to be implemented with CSS and JavaScript, and will be able to be displayed on webpages. The new web-based project will be the topic for deeper research of mine, which will also help with my academic business.
+**It was, but not anymore.** I am now back to this project. Instead, the `totowang-hhh/AppleGlassEffectWeb` will be given up.

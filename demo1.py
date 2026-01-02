@@ -28,7 +28,8 @@ class Config:
 
 class Text(object,):
     def __init__(self, screen, text:str, color=(255, 255, 255), pos:tuple[int,int]=(0, 0), 
-                 fontname:str="Arial", fontsize:int=28, onclick=None, loop_events_list:list=None, **kwargs):
+                 fontname:str="Arial", fontsize:int=28, onclick=lambda: None, 
+                 loop_events_list:list|None=None, **kwargs):
         self.screen = screen
         self.text = text
         self.fontname = fontname
@@ -37,7 +38,7 @@ class Text(object,):
         self.surface = font.render(text, True, color)
 
         self.WIDTH = self.surface.get_width()
-        self.HEIGHT = self.surface.get_height()
+        self.HEIGHT = self.surface.get_height() 
 
         self.x = pos[0]
         self.y = pos[1]
@@ -126,7 +127,9 @@ def change_image(path):
     load_image(path)
     draw_all()
 
-def draw_options(win, option_buttons:list=None):
+def draw_options(win, option_buttons:list|None=None):
+    if option_buttons == None:
+        option_buttons = []
     options = {"2025 by rgzz666": lambda: webbrowser.open("https://github.com/totowang-hhh"),
                "Load image": lambda: change_image(filebox.askopenfilename(title="Select an image to open")),
                "Set glass z-height": lambda: None,
@@ -135,7 +138,8 @@ def draw_options(win, option_buttons:list=None):
     if option_buttons in [[], "", 0, False, None]:
         option_buttons = []
         for option_index in range(len(options.keys())):
-            option_buttons.append(Text(win, list(options.keys())[option_index], onclick=list(options.values())[option_index], 
+            option_buttons.append(Text(win, list(options.keys())[option_index], 
+                                       onclick=list(options.values())[option_index], 
                                        fontsize = 20, loop_events_list=loop_events))
     for button_index in range(len(option_buttons)):
         option_buttons[button_index].display((0,button_index * 20))
@@ -327,7 +331,7 @@ def render(width, height, z_height, blur_radius, rect_radius):
                     pixels[y][x] = (255,g_value,0,255)
                 elif pixel_handled[1]:
                     pixels[y][x] = (0,g_value,255,255)
-            if Config.SHOW_GLASS_TOPOGRAPHY:
+            if Config.SHOW_GLASS_TOPOGRAPHY: 
                 approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
                 approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                 pixels[y][x] = (int(255*approx_pixel_z_height),int(255-255*approx_pixel_z_height),0,255)
