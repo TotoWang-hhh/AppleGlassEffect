@@ -1,6 +1,4 @@
-# Please note that this is an UNFINISHED version that is aimed to render a rounded rectangle glass effect.
-# I got stuck on calculating the distance from a specific point to the edge, as this may be out of my current knowledge base.
-# Always remember I was never a CG expert but a ordinary high-school student.
+# This demo is aimed to implement rounded rectangle glass effects.
 
 import pygame
 

@@ -1,12 +1,10 @@
-# Please note that this is an UNFINISHED version that is aimed to render a rounded rectangle glass effect.
-# I got stuck on calculating the distance from a specific point to the edge, as this may be out of my current knowledge base.
-# Always remember I was never a CG expert but a ordinary high-school student.
-
 import pygame
 
-import tkinter
+import tkinter as tk
+import tkinter.ttk as ttk
+import tttk
 import tkinter.filedialog as filebox
-tkroot = tkinter.Tk()
+tkroot = tk.Tk()
 tkroot.withdraw()
 
 from typing import Union
@@ -19,6 +17,8 @@ import numpy as np
 import math
 
 from PIL import Image, ImageFilter, ImageDraw
+
+from editable_treeview import EditableTreeview
 
 class Config:
     HIGHLIGHT_DEFLECTION_HANDLED = False
@@ -49,7 +49,8 @@ class Text(object,):
             if loop_events_list != None:
                 loop_events_list.append(lambda event: self.check_click(event))
             else:
-                warnings.warn("Set onclick function, but will not do event check as loop_events_list is not given")
+                warnings.warn("Set onclick function, but will not do event check "
+                              "as loop_events_list is not given")
             self.onclick = onclick
 
     def display(self,pos:tuple[int,int]=(0,0)):
@@ -137,16 +138,20 @@ def change_image(path):
 def draw_options(win, option_buttons:list|None=[]):
     if option_buttons == None:
         option_buttons = []
-    options = {"2025 by rgzz666": lambda: webbrowser.open("https://github.com/totowang-hhh"),
-            "Load image": lambda: change_image(filebox.askopenfilename(title="Select an image to open")),
-            "Set glass z-height": lambda: None,
-            "Set blur radius": lambda: None,
+    options = {
+        "Apple Liquid Glass Effect in Pygame: Demo 2 (Playground)": None,
+        "Duplicatable glass blocks & faster rendering with SDF": None,
+        "2025 by rgzz666": lambda: webbrowser.open("https://github.com/totowang-hhh"),
+        "Load image": lambda: change_image(filebox.askopenfilename\
+                                            (title="Select an image to use as background")),
+        "Open edit window": edit_window.show,
             }
     if option_buttons in [[], "", 0, False, None]:
         option_buttons = []
         for option_index in range(len(options.keys())):
-            option_buttons.append(Text(win, list(options.keys())[option_index], onclick=list(options.values())[option_index], 
-                                    fontsize = 20, loop_events_list=loop_events))
+            option_buttons.append(Text(win, list(options.keys())[option_index], 
+                                       onclick=list(options.values())[option_index], 
+                                       fontsize = 20, loop_events_list=loop_events))
     for button_index in range(len(option_buttons)):
         option_buttons[button_index].display((0,button_index * 20))
     return option_buttons
@@ -184,6 +189,64 @@ def resize(image):
     # 缩放窗口
     pygame.display.set_mode((new_w, new_h))
     return resized_img
+
+class EditWindow(tk.Toplevel):
+
+    def __init__(self):
+        # Initialize as a tkinter window
+        tk.Toplevel.__init__(self)
+        # Options list
+        OPTION_NAMES = [
+            "Comment", "X-position", "Y-position", "Width", "Height", "Depth (Z-height)", 
+            "Round corner radius", "Blur radius", 
+            ]
+        # Current config buffer
+        self.curr_config = []
+        # Widgets inside window
+        self.left_part = ttk.LabelFrame(self, text="Glass blocks")
+        ttk.Button(self.left_part, text="+ Add").pack(fill=tk.X, side=tk.BOTTOM)
+        ttk.Button(self.left_part, text="× Remove").pack(fill=tk.X, side=tk.BOTTOM)
+        self.glass_list = tk.Listbox(self.left_part, selectmode=tk.SINGLE)
+        self.glass_list.pack(fill=tk.BOTH, expand=True)
+        self.glass_list.bind("<<ListboxSelect>>", self.select_block)
+        self.left_part.pack(side = tk.LEFT, fill = tk.Y)
+        self.options_area = ttk.LabelFrame(self, text="Options")
+        self.options_area.pack(fill = tk.BOTH, expand = True)
+        self.option_entries = EditableTreeview(self.options_area, ["Attribute", "Value"], 
+                                               bind_key='<Double-Button-1>', show='headings', 
+                                               data=[(option_name, "") for option_name in \
+                                                     OPTION_NAMES], non_editable_columns="#1")
+        self.option_entries.pack(fill=tk.BOTH, expand=True)
+        # Set close button hides the window to prevent close
+        self.protocol("WM_DELETE_WINDOW", self.withdraw)
+        # Hide the edit window at initial state
+        self.withdraw()
+    
+    def show(self):
+        """Show edit window."""
+        self.deiconify()
+        self.update()
+        # Load in current glass block list
+        self.load_curr_config()
+
+    def load_curr_config(self):
+        """Load current config into edit window."""
+        global glass_blocks_conf
+        self.curr_config = glass_blocks_conf
+        self.glass_list.delete(0, tk.END)
+        for block in glass_blocks_conf:
+            print(f"Load config for glass block {block[0]} into edit window")
+            self.glass_list.insert(tk.END, block[0])
+    
+    def select_block(self, _=None):
+        """When selecting a glass block in list."""
+        selected_index = self.glass_list.curselection()
+        if len(selected_index) == 0:
+            # self.option_entries.set("ITEM0", 1, "Select a glass block to edit...")
+            return
+        for attr_index, value in enumerate(self.curr_config[selected_index[0]]):
+            self.option_entries.set(f"ITEM{attr_index}", 1, str(value))
+        # NotImplemented
 
 class LiquidGlass():
 
@@ -231,8 +294,6 @@ class LiquidGlass():
             return (0,0)
         distance_x_handleedge = min(point[0], rect_size[0] - point[0])
         distance_y_handleedge = min(point[1], rect_size[1] - point[1])
-        # This place is reserved for calculating distance from the point to edge of any other shapes.
-        # The function currently simply returns the distance from the point to the handling edge.
         distance_x = distance_x_handleedge
         distance_y = distance_y_handleedge
         if (point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius)) and \
@@ -312,7 +373,8 @@ class LiquidGlass():
         pil_img.putalpha(mask_img)
         # Convert to pygame surface and draw
         arr_blur = np.array(pil_img)
-        blur_surface = pygame.image.frombuffer(arr_blur.tobytes(), (width, height), "RGBA").convert_alpha()
+        blur_surface = pygame.image.frombuffer(arr_blur.tobytes(), 
+                                               (width, height), "RGBA").convert_alpha()
         win.blit(blur_surface, (base_x, base_y))
         ## Deflection, the key part must be self-written :)
         rect_mask = self.get_rounded_rect_mask(width, height, rect_radius)
@@ -329,7 +391,8 @@ class LiquidGlass():
                 after_x = x
                 after_y = y
                 distance_to_edge = self.calc_distance_to_edge(rect_radius, (width, height), (x, y))
-                if (y < z_height or (y > (height - z_height))) and self.pixel_is_in_rounded_rect(x, y, rect_mask):
+                if (y < z_height or (y > (height - z_height))) and \
+                   self.pixel_is_in_rounded_rect(x, y, rect_mask):
                     pixel_handled[1] = True
                     try:
                         y_offset = self.calc_deflection_offset(z_height, distance_to_edge[1])
@@ -367,7 +430,8 @@ class LiquidGlass():
                 if Config.SHOW_GLASS_TOPOGRAPHY: 
                     approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
                     approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
-                    pixels[y][x] = (int(255*approx_pixel_z_height),int(255-255*approx_pixel_z_height),0,255)
+                    pixels[y][x] = (int(255*approx_pixel_z_height),
+                                    int(255-255*approx_pixel_z_height),0,255)
         ## Draw!
         if Config.SHOW_HANDLED_ONLY:
             win.fill((0,0,0,255))
@@ -376,18 +440,24 @@ class LiquidGlass():
                 try:
                     win.set_at((base_x+x, base_y+y), pixels[y][x])
                 except:
-                    print(f"Invalid pixel color @ ({base_x+x},{base_y+y}) with RGB(A) {pixels[y][x]}")
+                    print(f"Invalid pixel color @ ({base_x+x},{base_y+y}) "
+                           "with RGB(A) {pixels[y][x]}")
                     win.set_at((base_x+x, base_y+y), (155,0,255,255))
         # Finally draw the outer frame
         self.draw_rect()
 
 pygame.init()
 win = pygame.display.set_mode(size=(1280,720))
-pygame.display.set_caption("Apple Glass Reflection Effect Demo")
+pygame.display.set_caption("Liquid Glass Playground")
 SCREEN_SIZE = pygame.display.list_modes()[0]
 loop_events = []
 
+edit_window = EditWindow()
 option_buttons = draw_options(win, [])
+
+glass_blocks_conf = [
+    ("Default glass block", 10, 10, 150, 150, 5, 5, 15)
+    ]
 
 while True:
     for event in pygame.event.get():
@@ -396,3 +466,4 @@ while True:
         if event.type == pygame.QUIT:
             os._exit(0)
     pygame.display.update()
+    tkroot.update()
