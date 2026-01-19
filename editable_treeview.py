@@ -116,6 +116,9 @@ class EditableTreeview(ttk.Treeview):
         return self.get_cell_cords(row = row, column = column)
 
     def update_row(self, values):
+        if self.editing_row == None:
+            return
+        
         current_row = self.editing_row
 
         currentindex = self.index(current_row)
@@ -123,7 +126,7 @@ class EditableTreeview(ttk.Treeview):
         self.delete(current_row)
         
         # Put it back in with the upated values
-        self.insert('', currentindex, values = values)
+        self.insert("", currentindex, values = values, iid=f"ITEM{currentindex}")
 
         # Set editing row to none
         self.editing_row = None
@@ -156,9 +159,22 @@ class EditableTreeview(ttk.Treeview):
 
         entry_var = tk.StringVar()
         
+        self.on_enter_edit(self.editing_row)
+
         PopupEntry(self, x=entry_x, y=entry_y, width=entry_w,entry_value=current_cell_value, 
                    textvar= entry_var, text_justify='left')
 
         if entry_var != current_cell_value:
             current_row_values[current_column] = entry_var.get()
+            self.on_finish_edit(self.editing_row, current_row_values)
             self.update_row(values=current_row_values)
+        else:
+            self.on_finish_edit(self.editing_row, current_row_values)
+    
+    @staticmethod
+    def on_enter_edit(editing_row):
+        return None
+    
+    @staticmethod
+    def on_finish_edit(editing_row, after_values):
+        return None
