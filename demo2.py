@@ -413,8 +413,6 @@ class LiquidGlass():
         self.z = z
         self.radius = radius
         self.blur = blur
-        self.rect_mask_cache = None
-        self.rect_mask_cache_params = (-1, -1, -1)
 
     def draw_rect(self):
         pygame.draw.rect(win, (100, 100, 100), 
@@ -494,7 +492,6 @@ class LiquidGlass():
                                                (width, height), "RGBA").convert_alpha()
         win.blit(blur_surface, (base_x, base_y))
         ## Deflection, the key part must be self-written :)
-        rect_mask = self.get_rounded_rect_mask(width, height, rect_radius)
         pixels: list[list[tuple]] = []
         # Add calculated blurred region to a pixel array
         for y in range(height):
