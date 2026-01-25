@@ -12,10 +12,16 @@ Please always note that I am never a CG expert, but an ordinary grade 10 student
 
 ## Known Issue(s)
 
+### ~~Deflection Simulating Method~~
+
 It is already known that the algorithm of the deflection offset is not fully correct (due to errors while calculations and derivation). One of the most efficient solutions is to use a simpler function to express the offset, and simulate the effect without considering any other physical facts. Just for confirmation, a comparison will be carried out between the two methods to see if they really look similar.
 
-Also, beyond the basic blur and deflection effect, the edge diffusion effect is not completed until now. It will be completed once the project is decided to be continued. 
+Until 2026-01-25, this problem has been solved by rewriting the deflection rendering part using a solution completely without Physics, since the older method was buggy and slow.
 
-## Is The Project Discontinued?
+### Edge Diffusion
 
-**It was, but not anymore.** I am now back to this project. Instead, the `totowang-hhh/AppleGlassEffectWeb` will be given up.
+The edge diffusion effect is not completed until now.
+
+This will be marked as non-planned as it is not that relevant to producing a similar effect with original Liquid Glass. Simulating the deflection effect is very enough. ~~While the most important reason is that, as my academic project, my deadline of a working version is near. :(~~
+
+The edge diffusion effect may still have some improvements on the final outcome if it was implemented, so it **may** be planned in future versions (will not be included in the academic project).
