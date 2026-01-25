@@ -2,7 +2,6 @@ import pygame
 
 import tkinter as tk
 import tkinter.ttk as ttk
-import tttk
 import tkinter.filedialog as filebox
 import tkinter.messagebox as msgbox
 tkroot = tk.Tk()
@@ -22,9 +21,7 @@ from PIL import Image, ImageFilter, ImageDraw
 from editable_treeview import EditableTreeview
 
 class Config:
-    HIGHLIGHT_DEFLECTION_HANDLED = False
     SHOW_GLASS_TOPOGRAPHY = False
-    OUTPUT_ROUNDED_CORNER_POINTS_DATA = False
 
 class Text(object,):
     def __init__(self, screen, text:str, color=(255, 255, 255), pos:tuple[int,int]=(0, 0), 
@@ -101,7 +98,7 @@ class Text(object,):
                     return False
 
 def get_between(original: int | float, min_value: int | float, 
-                max_value: int | float) -> int | float:
+                max_value: int | float) -> int | float: 
     if original < min_value:
         result = min_value
     elif original > max_value:
@@ -133,44 +130,47 @@ def error_detected():
 def load_image(path):
     global win, option_buttons
     if path in [None, "", 0, False]:
+        win.fill((0, 0, 0))
         return
     image = pygame.image.load(path)
     image = resize(image)
     win.blit(image, (0,0))
 
-def draw_all():
-    # width, height = [int(item*0.7) for item in win.get_size()]
-    global glass_blocks_conf
-    # glass_blocks = [
-    #     LiquidGlass(50, 100, 250, 150),
-    #     LiquidGlass(350, 50, 250, 250, radius=5),
-    #     LiquidGlass(650, 50, 250, 250, blur=0),
-    #     LiquidGlass(50, 350, 250, 250),
-    #     LiquidGlass(350, 350, 250, 250, z=50),
-    #     ]
-    glass_blocks = []
-    for block_args in glass_blocks_conf:
+def construct_blocks(config):
+    glass_blocks: list[LiquidGlass] = []
+    for block_args in config:
         glass_blocks.append(LiquidGlass(
             block_args[1], block_args[2], block_args[3], block_args[4], block_args[5], 
-            ))
+            block_args[6], block_args[7], ))
+    return glass_blocks
+
+def draw_all():
+    global glass_blocks_conf, curr_img_path
+    load_image(curr_img_path) # Reload image first to cover any proviously drawn stuff
+    glass_blocks = construct_blocks(glass_blocks_conf)
     for block in glass_blocks:
         block.render()
     draw_options(win, option_buttons=option_buttons) # Draw options finally to get it on top
 
 def change_image(path):
-    load_image(path)
+    global curr_img_path
+    if path in [None, "", 0, False]:
+        return
+    curr_img_path = path
     draw_all()
 
 def draw_options(win, option_buttons:list|None=[]):
     if option_buttons == None:
         option_buttons = []
     options = {
-        "Apple Liquid Glass Effect in Pygame: Demo 2 (Playground)": lambda: webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/"),
-        "Duplicatable glass blocks": None,
+        "Apple Liquid Glass Effect in Pygame: Demo 2 (Playground)": \
+            lambda: webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/"),
+        "Duplicatable glass blocks & Faster rendering": None,
         "2025 by rgzz666": lambda: webbrowser.open("https://github.com/TotoWang-hhh"),
         "Load image": lambda: change_image(filebox.askopenfilename\
                                             (title="Select an image to use as background")),
         "Open edit window": edit_window.show,
+        "Redraw all": draw_all,
             }
     if option_buttons in [[], "", 0, False, None]:
         option_buttons = []
@@ -366,7 +366,7 @@ class EditWindow(tk.Toplevel):
         """When adding a new glass block."""
         self._new_blocks_count += 1
         self.curr_config.append([f"New glass block #{self._new_blocks_count}", 
-                                 10, 10, 150, 150, 5, 5, 15])
+                                 10, 10, 150, 150, 5, 5, 2])
         self.load_curr_config()
         self.set_state(f"Added new glass block {self._new_blocks_count}.")
 
@@ -421,84 +421,47 @@ class LiquidGlass():
                          (self.x, self.y, self.w, self.h), 
                          1, border_radius=self.radius)
 
-    def get_rounded_rect_mask(self, width, height, radius):
-        global rect_mask_cache, rect_mask_cache_params
-        if self.rect_mask_cache_params == (width, height, radius):
-            return self.rect_mask_cache
-        # Use PIL to draw mask
-        mask_img = Image.new("L", (width, height), 0)
-        draw = ImageDraw.Draw(mask_img)
-        draw.rounded_rectangle([0, 0, width-1, height-1], radius=radius, fill=255)
-        mask = np.array(mask_img) > 0  # shape: (height, width)
-        # Cache it!
-        rect_mask_cache = mask.copy()
-        rect_mask_cache_params = (width, height, radius)
-        return rect_mask_cache
-
-    def pixel_is_in_rounded_rect(self, x, y, mask):
-        # 现在 mask.shape = (height, width)
-        if 0 <= y < mask.shape[0] and 0 <= x < mask.shape[1]:
-            return bool(mask[y, x])
-        return False
-
-    def calc_distance_to_edge(self, rect_radius:int, rect_size:tuple[int, int], 
-                              point:tuple[int, int]):
-        if not self.pixel_is_in_rounded_rect(point[0], point[1], 
-                                             self.get_rounded_rect_mask(rect_size[0], rect_size[1], 
-                                                                        rect_radius)):
-            return (0,0)
-        distance_x_handleedge = min(point[0], rect_size[0] - point[0])
-        distance_y_handleedge = min(point[1], rect_size[1] - point[1])
-        distance_x = distance_x_handleedge
-        distance_y = distance_y_handleedge
-        if (point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius)) and \
-            (point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius)):
-            if distance_x_handleedge != 0:
-                distance_y = (rect_radius ** 2 - (rect_radius - distance_x_handleedge) ** 2) \
-                    ** 0.5 - (rect_radius - distance_y_handleedge)
+    def calc_distance_to_edge(self, point: tuple[int, int]) -> list[int]:
+        # Handle edge: The rectangle shaped edge where the code handles
+        # Shape edge: The actual shape where the glass block takes up
+        rect_size = [self.w, self.h]
+        result: list[int] = [0, 0]
+        for direction, d_handle_neighbor in enumerate(point): 
+            # (var) direction: int, either 0 for x or 1 for y
+            # (expression) 1 - direction: mask (invert) the direction value to indicate direction 
+            #                             of the calculation result
+            # The coords of the point is the distance to handle edge.
+            # For such distance in each direction, we sort them into 3 cases to treat in different 
+            # way when getting the distance to the shape edge in the other direction (e.g. 
+            # d_handle in x => Recognized as case A => d_shape in y): 
+            d_handle = point[1-direction]
+            if self.radius <= d_handle_neighbor <= (rect_size[direction] - self.radius):
+                # Case 1: in middle rect part
+                # Shape edge is the handle edge
+                result[1-direction] = min(d_handle, rect_size[1-direction] - d_handle)
             else:
-                distance_y = 0
-            if distance_y_handleedge != 0:
-                distance_x = (rect_radius ** 2 - (rect_radius - distance_y_handleedge) ** 2) \
-                    ** 0.5 - (rect_radius - distance_x_handleedge)
-            else:
-                distance_x = 0
-        data_error = type(distance_x) not in [int, float] or type(distance_y) not in [int, float]
-        if Config.OUTPUT_ROUNDED_CORNER_POINTS_DATA or data_error:
-            if not False in [point[0] < rect_radius or point[0] > (rect_size[0] - rect_radius),
-                            point[1] < rect_radius or point[1] > (rect_size[1] - rect_radius),
-                            self.pixel_is_in_rounded_rect(point[0],point[1], 
-                                                          self.get_rounded_rect_mask(rect_size[0],
-                                                                                     rect_size[1],
-                                                                                     rect_radius)),
-                            ] or data_error:
-                print(f"Point {point} has distance to:")
-                print(f"  Shape edge on x: {int(distance_x) if not data_error else distance_x}, "
-                      f"on y: {int(distance_y) if not data_error else distance_y}"
-                    "     * Note: Shape edge refers to the edge of the rounded rectangle part that "
-                    "the glass taken up.")
-                print(f"  Handle edge on x: {distance_x_handleedge}, on y: "
-                      f"{int(distance_y_handleedge)}"
-                    "     * Note: Handle edge refers to the edge of the rectangle region that the "
-                    "rendering function handles.")
-                if data_error:
-                    print("  * This output is due to a data error.")
-                    return (0, 0)
-        return (int(distance_x), int(distance_y))
+                # Case 2 & 3: Point is in either edge in such direction (within round corner region)
+                # |- Case 2: Left / Upper edges
+                # |- Case 3: Right / Lower edges
+                # Treat round corner regions region as a segment (1/4 circle), we convert them into 
+                # case 3 to make calculations easier
+                # (var) d_edge: distance of a point to edge of inner rectangle area
+                if d_handle_neighbor > (rect_size[direction] - d_handle_neighbor):
+                    d_handle_neighbor_abs = rect_size[direction] - d_handle_neighbor
+                else:
+                    d_handle_neighbor_abs = d_handle_neighbor
+                d_neighbor_edge = (self.radius - d_handle_neighbor_abs)
+                d_edge = min(d_handle, (rect_size[1-direction] - d_handle)) - self.radius
+                d_shape = d_edge + (self.radius ** 2 - d_neighbor_edge ** 2) ** 0.5
+                result[1-direction] = d_shape
+        # result.append((result[0] ** 2 + result[1] ** 2) ** 0.5) # Shortest straight line distance
+        return result
 
-    deflection_offset_cache = {}
-    def calc_deflection_offset(self, z_height:int, distance_to_edge:int) -> int:
-        global deflection_offset_cache
-        try:
-            if str(distance_to_edge) in self.deflection_offset_cache.keys():
-                offset = self.deflection_offset_cache[str(distance_to_edge)]
-            else:
-                point_z_height = (z_height ** 2 - distance_to_edge ** 2) ** 0.5
-                slope_gradient = 0.5 * math.pi - math.atan(distance_to_edge / point_z_height)
-                offset = math.tan(slope_gradient) * point_z_height
-                self.deflection_offset_cache[str(distance_to_edge)] = offset
-        except:
-            offset = 0
+    def calc_deflection_offset(self, distance_to_edge:int, max_offset: int) -> int:
+        if not 0 < distance_to_edge < self.z:
+            return 0
+        # point_z_height = (2 * self.z * distance_to_edge - distance_to_edge ** 2) ** 0.5
+        offset = (max_offset / self.z ** 4) * (distance_to_edge - self.z) ** 4
         offset = int(round(offset, 0))
         return offset
 
@@ -510,7 +473,6 @@ class LiquidGlass():
         base_y = self.y
         width = self.w
         height = self.h
-        z_height = self.z
         rect_radius = self.radius
         blur_radius = self.blur
         ## Basic backdrop blur, written by GitHub Copilot
@@ -533,57 +495,41 @@ class LiquidGlass():
         win.blit(blur_surface, (base_x, base_y))
         ## Deflection, the key part must be self-written :)
         rect_mask = self.get_rounded_rect_mask(width, height, rect_radius)
-        pixels = []
+        pixels: list[list[tuple]] = []
+        # Add calculated blurred region to a pixel array
         for y in range(height):
             pixels.append([])
             for x in range(width):
                 pixels[y].append(tuple(win.get_at((base_x+x,base_y+y))))
-            # print(base_pixels[y]) # Never uncomment this line unless u wanna blow up ur console
-        # base_pixels = pixels # Use base_pixels to store original pixels info after blur
+        # Calculate deflection
+        pixels_origin: list[list[tuple]] = pixels.copy()
         for y in range(len(pixels)):
             for x in range(len(pixels[y])):
                 pixel_handled = [False, False]
+                # x and y after deflection
                 after_x = x
                 after_y = y
-                distance_to_edge = self.calc_distance_to_edge(rect_radius, (width, height), (x, y))
-                if (y < z_height or (y > (height - z_height))) and \
-                   self.pixel_is_in_rounded_rect(x, y, rect_mask):
-                    pixel_handled[1] = True
-                    try:
-                        y_offset = self.calc_deflection_offset(z_height, distance_to_edge[1])
-                        if y > (height - z_height):
-                            y_offset = -y_offset
-                            # y_offset = 0
-                    except:
-                        y_offset = 0
-                    y_offset = int(round(y_offset, 0))
-                    after_y = get_between(y + y_offset, 0, height-1)
-                if (x < z_height or (x > (width - z_height))) and \
-                   self.pixel_is_in_rounded_rect(x, y, rect_mask):
-                    pixel_handled[0] = True
-                    try:
-                        x_offset = self.calc_deflection_offset(z_height, distance_to_edge[0])
-                        if x > (width - z_height):
-                            x_offset = -x_offset
-                            # x_offset = 0
-                    except:
-                        x_offset = 0
-                    x_offset = int(round(x_offset, 0))
-                    # x_offset = 0
-                    after_x = get_between(x + x_offset, 0, width-1)
-                pixels[y][x] = pixels[after_y][after_x]
-                # pixels[y][x] = (0,0,255,255)
-                # pixels[after_y][after_x] = (int(y * (255 / z_height)), 0, 0, 255)
-                if Config.HIGHLIGHT_DEFLECTION_HANDLED:
-                    g_value = 155 if self.pixel_is_in_rounded_rect(x, y, rect_mask) else 0
-                    if not False in pixel_handled:
-                        pixels[y][x] = (255,g_value,155,255)
-                    elif pixel_handled[0]:
-                        pixels[y][x] = (255,g_value,0,255)
-                    elif pixel_handled[1]:
-                        pixels[y][x] = (0,g_value,255,255)
+                # Calc distance to edge
+                distance_to_edge = self.calc_distance_to_edge((x, y))
+                if distance_to_edge[0] > 0 and distance_to_edge[1] > 0: 
+                    # ↑ This means that the pixel is within the shape
+                    # Calc after x and y base on distance to edge
+                    x_offset = self.calc_deflection_offset(distance_to_edge[0], self.w)
+                    y_offset = self.calc_deflection_offset(distance_to_edge[1], self.h)
+                    # If is right / bottom side, negative the offset
+                    if x > (self.w - self.z):
+                        x_offset = - x_offset
+                    if y > (self.h - self.z):
+                        y_offset = - y_offset
+                    after_x += x_offset
+                    after_y += y_offset
+                    # Correct out of range destinate x and y values
+                    after_x = int(get_between(after_x, 0, self.w - 1))
+                    after_y = int(get_between(after_y, 0, self.h - 1))
+                    # Handle the offset
+                    pixels[y][x] = pixels_origin[after_y][after_x]
                 if Config.SHOW_GLASS_TOPOGRAPHY: 
-                    approx_pixel_z_height = min(distance_to_edge[0], distance_to_edge[1]) / z_height
+                    approx_pixel_z_height = distance_to_edge[2]
                     approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                     pixels[y][x] = (int(255*approx_pixel_z_height),
                                     int(255-255*approx_pixel_z_height),0,255)
@@ -599,20 +545,39 @@ class LiquidGlass():
         # Finally draw the outer frame
         self.draw_rect()
 
+
+class Test():
+    @staticmethod
+    def calc_distance_edge(w: int, h: int, r: int) -> list[list[list[int]]]:
+        test_matrix = [[[0, 0, 0] for _ in range(w)] for _ in range(h)]
+        for y, line in enumerate(test_matrix):
+            for x, point in enumerate(line):
+                test_matrix[y][x] = [int(item) for item in LiquidGlass.calc_distance_to_edge(\
+                    LiquidGlass(0, 0, w, h, radius=r), (x, y))]
+            print(line)
+        return test_matrix
+
+# Initialize the main window
 pygame.init()
 win = pygame.display.set_mode(size=(1280,720))
 pygame.display.set_caption("Liquid Glass Playground")
 SCREEN_SIZE = pygame.display.list_modes()[0]
 loop_events = []
 
+# Initialize the edit window
 edit_window = EditWindow()
+
+# Initialize texts and buttons on main window
 option_buttons = draw_options(win, [])
 
+# Some global configs
+curr_img_path = ""
 glass_blocks_conf = [
-    ("Default glass block", 50, 200, 250, 250, 15, 15, 2)
+    ("Default glass block", 50, 200, 250, 250, 30, 15, 2)
     ]
 
-error_detected()
+# # The below line is for testing error detection only. Comment it in normal cases!
+# error_detected()
 
 while True:
     for event in pygame.event.get():
