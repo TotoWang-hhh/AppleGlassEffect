@@ -14,7 +14,9 @@ import warnings
 import webbrowser
 
 import numpy as np
-import math
+import random
+
+import re
 
 from PIL import Image, ImageFilter, ImageDraw
 
@@ -107,6 +109,20 @@ def get_between(original: int | float, min_value: int | float,
         result = original
     return result
 
+def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+    if hex_color.startswith("#"):
+        hex_color = hex_color[1:]
+    
+    if not re.fullmatch(r"([0-9a-fA-F]{6})$", hex_color):
+        # If not a valid hex color, return green
+        return (0, 255, 0)
+
+    return (
+        int(hex_color[0:2], 16),
+        int(hex_color[2:4], 16),
+        int(hex_color[4:6], 16),
+    )
+
 def error_detected():
     if msgbox.askokcancel("Liquid Glass Playground: Error Detected", 
         "An error may be detected by internal code, and a force quit of this program was "
@@ -145,12 +161,12 @@ def construct_blocks(config):
     return glass_blocks
 
 def draw_all():
-    global glass_blocks_conf, curr_img_path
+    global glass_blocks_conf, curr_img_path, option_buttons
     load_image(curr_img_path) # Reload image first to cover any proviously drawn stuff
     glass_blocks = construct_blocks(glass_blocks_conf)
     for block in glass_blocks:
         block.render()
-    draw_options(win, option_buttons=option_buttons) # Draw options finally to get it on top
+    draw_options(option_buttons=option_buttons) # Draw options finally to get it on top
 
 def change_image(path):
     global curr_img_path
@@ -159,36 +175,25 @@ def change_image(path):
     curr_img_path = path
     draw_all()
 
-def draw_options(win, option_buttons:list|None=[]):
-    if option_buttons == None:
-        option_buttons = []
-    options = {
-        "Apple Liquid Glass Effect in Pygame: Demo 2 (Playground)": \
-            lambda: webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/"),
-        "Duplicatable glass blocks & Faster rendering": None,
-        "2025 by rgzz666": lambda: webbrowser.open("https://github.com/TotoWang-hhh"),
-        "Load image": lambda: change_image(filebox.askopenfilename\
-                                            (title="Select an image to use as background")),
-        "Open edit window": edit_window.show,
-        "Redraw all": draw_all,
-            }
-    if option_buttons in [[], "", 0, False, None]:
-        option_buttons = []
-        for option_index in range(len(options.keys())):
-            option_buttons.append(Text(win, list(options.keys())[option_index], 
-                                       onclick=list(options.values())[option_index], 
-                                       fontsize = 20, loop_events_list=loop_events))
-    for button_index in range(len(option_buttons)):
-        option_buttons[button_index].display((0,button_index * 20))
+def make_option_buttons(win, options: dict = {}):
+    option_buttons = []
+    for option_index in range(len(options.keys())):
+        option_buttons.append(Text(win, list(options.keys())[option_index], 
+                                    onclick=list(options.values())[option_index], 
+                                    fontsize = 20, loop_events_list=loop_events))
     return option_buttons
 
+def draw_options(option_buttons: list=[]):
+    for button_index in range(len(option_buttons)):
+        option_buttons[button_index].display((0,button_index * 20))
+
 def resize(image):
-    # 使用启动时保存的主屏分辨率
+    # Get screen and image size
     screen_w, screen_h = SCREEN_SIZE
 
     img_w, img_h = image.get_width(), image.get_height()
 
-    # 计算缩放比例，保证图片不超出屏幕，且短边不超过屏幕60%
+    # Calc destinate size, short side not longer than 60% of screen size
     scale_w = screen_w / img_w
     scale_h = screen_h / img_h
     scale = min(scale_w, scale_h, 0.6 * screen_w / img_w, 0.6 * screen_h / img_h, 1.0)
@@ -196,7 +201,6 @@ def resize(image):
     new_w = int(img_w * scale)
     new_h = int(img_h * scale)
 
-    # 短边不超过屏幕60%
     if new_w < new_h:
         max_short = int(screen_w * 0.6)
         if new_w > max_short:
@@ -210,9 +214,9 @@ def resize(image):
             new_h = max_short
             new_w = int(img_w * scale)
 
-    # 缩放图片
+    # Resize image
     resized_img = pygame.transform.smoothscale(image, (new_w, new_h))
-    # 缩放窗口
+    # Resize window
     pygame.display.set_mode((new_w, new_h))
     return resized_img
 
@@ -224,7 +228,7 @@ class EditWindow(tk.Toplevel):
         # Options list
         self.OPTION_NAMES = [
             "Comment", "X-position", "Y-position", "Width", "Height", "Depth (Z-height)", 
-            "Round corner radius", "Blur radius", 
+            "Round corner radius", "Blur radius", "Background color", "Alpha"
             ]
         # Current config buffer
         self.curr_config = []
@@ -329,7 +333,9 @@ class EditWindow(tk.Toplevel):
 
     def convert_attrs(self) -> list | None:
         """Converts attr config string into types they should be."""
-        ATTR_TYPES = ["str", "int", "int", "int", "int", "int", "int", "int", ]
+        ATTR_TYPES = [
+            "str", "int", "int", "int", "int", "int", "int", "int", "hex_color", "float", 
+            ]
         for block_index, attrs in enumerate(self.curr_config):
             result = []
             if len(attrs) != len(ATTR_TYPES):
@@ -351,6 +357,26 @@ class EditWindow(tk.Toplevel):
                                 result.append(0)
                                 self.select_field(block_index, index, silent=True)
                                 return
+                        case "float":
+                            if attr.isdigit():
+                                result.append(float(attr))
+                            else:
+                                self.set_state(f"Value '{attr}' for {self.OPTION_NAMES[index]} "
+                                                "must be a float! Check your entered value and "
+                                                "retry.", color="pink")
+                                result.append(0)
+                                self.select_field(block_index, index, silent=True)
+                                return
+                        case "hex_color":
+                            if re.fullmatch(r"#?([0-9a-fA-F]{6})$", attr):
+                                result.append(attr)
+                            else:
+                                self.set_state(f"Value '{attr}' for {self.OPTION_NAMES[index]} "
+                                                "must be a hex color! Check your entered value and "
+                                                "retry.", color="pink")
+                                result.append("#00ff00")
+                                self.select_field(block_index, index, silent=True)
+                                return
                         case _:
                             self.set_state(f"Wrong required type '{ATTR_TYPES[index]}' for arg "
                                            f"{self.OPTION_NAMES[index]}!", color="pink")
@@ -365,8 +391,10 @@ class EditWindow(tk.Toplevel):
     def add_block(self):
         """When adding a new glass block."""
         self._new_blocks_count += 1
-        self.curr_config.append([f"New glass block #{self._new_blocks_count}", 
-                                 10, 10, 150, 150, 5, 5, 2])
+        self.curr_config.append(
+            [f"New glass block #{self._new_blocks_count}", 
+            random.randint(0, 300), random.randint(0, 300), 250, 250, 30, 15, 2, "#ffffff", 0.3]
+            )
         self.load_curr_config()
         self.set_state(f"Added new glass block {self._new_blocks_count}.")
 
@@ -405,7 +433,18 @@ class EditWindow(tk.Toplevel):
 
 class LiquidGlass():
 
-    def __init__(self, x, y, w, h, z=15, radius=15, blur=2):
+    def __init__(
+            self, 
+            x: int, 
+            y: int, 
+            w: int, 
+            h: int, 
+            z: int = 15, 
+            radius: int = 15, 
+            blur: int = 2, 
+            background: str = "#ffffff", 
+            alpha: float = 0.3
+            ):
         self.x = x
         self.y = y
         self.w = w
@@ -413,6 +452,8 @@ class LiquidGlass():
         self.z = z
         self.radius = radius
         self.blur = blur
+        bg_rgb = hex_to_rgb(background)
+        self.translucent = (bg_rgb[0], bg_rgb[1], bg_rgb[2], int(alpha * 255))
 
     def draw_rect(self):
         pygame.draw.rect(win, (100, 100, 100), 
@@ -530,7 +571,7 @@ class LiquidGlass():
                     approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
                     pixels[y][x] = (int(255*approx_pixel_z_height),
                                     int(255-255*approx_pixel_z_height),0,255)
-        ## Draw!
+        # Draw deflection
         for y in range(len(pixels)):
             for x in range(len(pixels[y])):
                 try:
@@ -539,7 +580,16 @@ class LiquidGlass():
                     print(f"Invalid pixel color @ ({base_x+x},{base_y+y}) "
                            "with RGB(A) {pixels[y][x]}")
                     win.set_at((base_x+x, base_y+y), (155,0,255,255))
-        # Finally draw the outer frame
+        ## Translucent layer
+        overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        pygame.draw.rect(
+            overlay, 
+            self.translucent, 
+            pygame.Rect(0, 0, self.w, self.h), 
+            border_radius = self.radius
+            )
+        win.blit(overlay, (self.x, self.y))
+        ## Finally draw the outer frame
         self.draw_rect()
 
 
@@ -565,13 +615,24 @@ loop_events = []
 edit_window = EditWindow()
 
 # Initialize texts and buttons on main window
-option_buttons = draw_options(win, [])
+options = {
+    "Apple Liquid Glass Effect in Pygame: Demo 2 (Playground)": \
+        lambda: webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/"),
+    "Moving glass block (Test rendering speed)": None,
+    "2025 by rgzz666": lambda: webbrowser.open("https://github.com/TotoWang-hhh"),
+    "Load image": lambda: change_image(filebox.askopenfilename\
+                                        (title="Select an image to use as background")),
+    }
+option_buttons = make_option_buttons(win, options)
 
 # Some global configs
 curr_img_path = ""
 glass_blocks_conf = [
-    ("Default glass block", 50, 200, 250, 250, 30, 15, 2)
+    ("Default glass block", 50, 200, 250, 250, 30, 15, 2, "#ffffff", 0.3)
     ]
+
+# Initial draw
+draw_all()
 
 # # The below line is for testing error detection only. Comment it in normal cases!
 # error_detected()
