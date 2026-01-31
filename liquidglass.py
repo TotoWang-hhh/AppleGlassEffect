@@ -4,9 +4,6 @@ import re
 import numpy as np
 
 
-class DebugConfig:
-    SHOW_GLASS_TOPOGRAPHY = False
-
 class LiquidGlass():
 
     def __init__(
