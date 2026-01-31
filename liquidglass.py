@@ -20,23 +20,19 @@ class LiquidGlass():
             radius: int = 15, 
             blur: int = 2, 
             background: str = "#ffffff", 
-            alpha: float = 0.2
+            alpha: float = 0.2, 
             ):
-        self.parent = parent
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.z = z
-        self.radius = radius
-        self.blur = blur
-        bg_rgb = hex_to_rgb(background)
-        self.translucent = (bg_rgb[0], bg_rgb[1], bg_rgb[2], int(alpha * 255))
-
-    def draw_rect(self):
-        pygame.draw.rect(self.parent, (100, 100, 100), 
-                         (self.x, self.y, self.w, self.h), 
-                         1, border_radius=self.radius)
+        self.parent: pygame.Surface = parent
+        self.x: int = x
+        self.y: int = y
+        self.w: int = w
+        self.h: int = h
+        self.z: int = z
+        self.radius: int = radius
+        self.blur: int = blur
+        bg_rgb: tuple = hex_to_rgb(background)
+        self.translucent: tuple = (bg_rgb[0], bg_rgb[1], bg_rgb[2], int(alpha * 255))
+        self.highlight_thickness: int = int(max(self.w, self.h) * 0.01)
 
     def calc_distance_to_edge(self, point: tuple[int, int]) -> list[int]:
         # Handle edge: The rectangle shaped edge where the code handles
@@ -71,19 +67,18 @@ class LiquidGlass():
                 d_edge = min(d_handle, (rect_size[1-direction] - d_handle)) - self.radius
                 d_shape = d_edge + (self.radius ** 2 - d_neighbor_edge ** 2) ** 0.5
                 result[1-direction] = d_shape
-        # result.append((result[0] ** 2 + result[1] ** 2) ** 0.5) # Shortest straight line distance
         return result
 
-    def calc_deflection_offset(self, distance_to_edge:int, max_offset: int) -> int:
+    def calc_deflection_offset(self, distance_to_edge:int, max_deflection: int) -> int:
         if not 0 < distance_to_edge < self.z:
             return 0
-        # point_z_height = (2 * self.z * distance_to_edge - distance_to_edge ** 2) ** 0.5
-        offset = (max_offset / self.z ** 4) * (distance_to_edge - self.z) ** 4
+        offset = (max_deflection / self.z ** 4) * (distance_to_edge - self.z) ** 4
         offset = int(round(offset, 0))
         return offset
 
     def render(self):
         """This is used to draw or update the liquid glass block"""
+        ### Off-screen calculated layers
         ## Basic backdrop blur, written by GitHub Copilot
         rect = pygame.Rect(self.x, self.y, self.w, self.h)
         bg_surface = self.parent.subsurface(rect).copy()
@@ -128,14 +123,16 @@ class LiquidGlass():
                     after_y = int(get_between(after_y, 0, self.h - 1))
                     # Handle the offset
                     arr[y][x] = pixels_origin[after_y][after_x]
-                if DebugConfig.SHOW_GLASS_TOPOGRAPHY: 
-                    approx_pixel_z_height = distance_to_edge[2]
-                    approx_pixel_z_height = get_between(approx_pixel_z_height, 0, 1)
-                    arr[y][x] = (int(255*approx_pixel_z_height),
-                                    int(255-255*approx_pixel_z_height),0,255)
         # Draw deflection
-        handled_surface = pygame.image.frombuffer(arr.tobytes(), (self.w, self.h), "RGBA").convert_alpha()
+        match len(arr[0][0]):
+            case 3:
+                color_type = "RGB"
+            case 4:
+                color_type = "RGBA"
+        handled_surface = pygame.image.frombuffer(arr.tobytes(), (self.w, self.h), 
+                                                  color_type).convert_alpha()
         self.parent.blit(handled_surface, (self.x, self.y))
+        ### Overlays
         ## Translucent layer
         overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
         pygame.draw.rect(
@@ -145,8 +142,15 @@ class LiquidGlass():
             border_radius = self.radius
             )
         self.parent.blit(overlay, (self.x, self.y))
-        ## Finally draw the outer frame
-        self.draw_rect()
+        del overlay
+        ## Outer frame (highlight)
+        overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
+        HIGHLIGHT_ALPHA = 0.4
+        pygame.draw.rect(overlay, (255, 255, 255, int(HIGHLIGHT_ALPHA * 255)), 
+                        (0, 0, self.w, self.h), self.highlight_thickness, 
+                        border_radius=self.radius)
+        self.parent.blit(overlay, (self.x, self.y))
+        del overlay
 
 
 def get_between(original: int | float, min_value: int | float, 
