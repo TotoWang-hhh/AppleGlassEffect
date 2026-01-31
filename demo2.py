@@ -1,3 +1,5 @@
+import typing
+
 import pygame
 
 import tkinter as tk
@@ -6,9 +8,7 @@ import tkinter.messagebox as msgbox
 tkroot = tk.Tk()
 tkroot.withdraw()
 
-import typing
 import os
-import warnings
 
 import webbrowser
 
