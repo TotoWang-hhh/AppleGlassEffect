@@ -18,6 +18,8 @@ class LiquidGlass():
             blur: int = 2, 
             background: str = "#ffffff", 
             alpha: float = 0.2, 
+            text: str = "", 
+            text_color: str = "#000000", 
             ):
         self.parent: pygame.Surface = parent
         self.x: int = x
@@ -30,6 +32,8 @@ class LiquidGlass():
         bg_rgb: tuple = hex_to_rgb(background)
         self.translucent: tuple = (bg_rgb[0], bg_rgb[1], bg_rgb[2], int(alpha * 255))
         self.highlight_thickness: int = int(max(self.w, self.h) * 0.01)
+        self.text: str = text
+        self.text_color: tuple = hex_to_rgb(text_color)
 
     def calc_distance_to_edge(self, point: tuple[int, int]) -> list[int]:
         # Handle edge: The rectangle shaped edge where the code handles
