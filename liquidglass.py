@@ -1,3 +1,5 @@
+import typing
+
 import pygame
 from PIL import Image, ImageFilter, ImageDraw
 import re
