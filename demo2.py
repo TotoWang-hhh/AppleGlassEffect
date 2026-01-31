@@ -417,7 +417,7 @@ class EditWindow(tk.Toplevel):
         if self.option_entries.editing_row == None:
             return
         attr_name = self.option_entries.item(editing_row,'values')[0]
-        glass_name = self.glass_list.get(self.selected_block_index)
+        glass_name = self.glass_list.get(self.selected_block_index) 
         self.set_state(f"Editing attribute '{attr_name}' for {glass_name}.", color="yellow")
     
     def on_finish_edit(self, editing_row, after_values):
