@@ -31,7 +31,6 @@ class LiquidGlass():
         self.radius = radius
         self.blur = blur
         bg_rgb = hex_to_rgb(background)
-        print(alpha)
         self.translucent = (bg_rgb[0], bg_rgb[1], bg_rgb[2], int(alpha * 255))
 
     def draw_rect(self):
