@@ -16,14 +16,22 @@ else:
 
 class EditWindow(tk.Toplevel):
 
-    def __init__(self, glass_blocks_conf: list):
+    def __init__(
+            self, 
+            glass_blocks_conf: list, 
+            glass_options: dict, 
+            new_template: list | None = None
+            ):
         # Initialize as a tkinter window
         tk.Toplevel.__init__(self)
         # Options list
-        self.OPTION_NAMES = [
-            "Comment", "X-position", "Y-position", "Width", "Height", "Depth (Z-height)", 
-            "Round corner radius", "Blur radius", "Background color", "Alpha"
-            ]
+        self.option_names = list(glass_options.keys())
+        self.option_types = list(glass_options.values())
+        # New glass block template
+        self.new_template = [""] * len(self.option_names)
+        if new_template != None:
+            if len(new_template) == len(self.option_names):
+                self.new_template = new_template
         # Current config buffer
         self.glass_blocks_conf = glass_blocks_conf
         self.curr_config = []
@@ -47,7 +55,7 @@ class EditWindow(tk.Toplevel):
         self.option_entries = EditableTreeview(self.options_area, ["Attribute", "Value"], 
                                                bind_key='<Double-Button-1>', show='headings', 
                                                data=[(option_name, "") for option_name in \
-                                                     self.OPTION_NAMES], non_editable_columns="#1")
+                                                     self.option_names], non_editable_columns="#1")
         self.option_entries.pack(fill=tk.BOTH, expand=True)
         tk.Label(self.options_area, text="💡 Double click a field to edit").pack(fill = tk.BOTH)
         # Rename the window
@@ -57,6 +65,9 @@ class EditWindow(tk.Toplevel):
         self.option_entries.on_finish_edit = self.on_finish_edit
         # Set close button hides the window to prevent close
         self.protocol("WM_DELETE_WINDOW", self.hide)
+        # Auto set size
+        self.update()
+        self.minsize(int(self.winfo_width() * 1.2), self.winfo_height())
         # Hide the edit window at initial state
         self.withdraw()
 
@@ -125,58 +136,48 @@ class EditWindow(tk.Toplevel):
         self.select_block(silent=silent)
         self.option_entries.selection_set(f"ITEM{attr_index}")
 
+    def convert_attr_value(self, value: str, target_type: str) \
+        -> tuple[bool, typing.Any]:
+        """Validate and convert one given attribute value."""
+        match target_type.lower():
+            case "str":
+                return True, value
+            case "int":
+                if value.isdigit():
+                    return True, int(value)
+                else:
+                    return False, 0
+            case "float":
+                if value.replace('.', '', 1).isdigit():
+                    return True, float(value)
+                else:
+                    return False, 0
+            case "hex_color":
+                if re.fullmatch(r"#?([0-9a-fA-F]{6})$", value):
+                    return True, value
+                else:
+                    return False, "#00ff00"
+            case _:
+                error_detected()
+                return (False, value)
+
     def convert_attrs(self) -> list | None:
         """Converts attr config string into types they should be."""
-        ATTR_TYPES = [
-            "str", "int", "int", "int", "int", "int", "int", "int", "hex_color", "float", 
-            ]
         for block_index, attrs in enumerate(self.curr_config):
             result = []
-            if len(attrs) != len(ATTR_TYPES):
-                self.set_state(f"Wrong number of attribute values: expected {len(ATTR_TYPES)} but "
-                               f"got {len(attrs)}", color="pink")
+            if len(attrs) != len(self.option_types):
+                self.set_state(f"Wrong number of attribute values: expected "
+                               f"{len(self.option_types)} but got {len(attrs)}",color="pink")
                 error_detected()
             for index, attr in enumerate(attrs):
                 if type(attr) is str: # Only handles string
-                    match ATTR_TYPES[index].lower():
-                        case "str":
-                            result.append(attr)
-                        case "int":
-                            if attr.isdigit():
-                                result.append(int(attr))
-                            else:
-                                self.set_state(f"Value '{attr}' for {self.OPTION_NAMES[index]} "
-                                                "must be an integer! Check your entered value and "
-                                                "retry.", color="pink")
-                                result.append(0)
-                                self.select_field(block_index, index, silent=True)
-                                return
-                        case "float":
-                            if attr.replace('.', '', 1).isdigit():
-                                result.append(float(attr))
-                            else:
-                                self.set_state(f"Value '{attr}' for {self.OPTION_NAMES[index]} "
-                                                "must be a float! Check your entered value and "
-                                                "retry.", color="pink")
-                                result.append(0)
-                                self.select_field(block_index, index, silent=True)
-                                return
-                        case "hex_color":
-                            if re.fullmatch(r"#?([0-9a-fA-F]{6})$", attr):
-                                result.append(attr)
-                            else:
-                                self.set_state(f"Value '{attr}' for {self.OPTION_NAMES[index]} "
-                                                "must be a hex color! Check your entered value and "
-                                                "retry.", color="pink")
-                                result.append("#00ff00")
-                                self.select_field(block_index, index, silent=True)
-                                return
-                        case _:
-                            self.set_state(f"Wrong required type '{ATTR_TYPES[index]}' for arg "
-                                           f"{self.OPTION_NAMES[index]}!", color="pink")
-                            result.append(attr)
-                            error_detected()
-                            return
+                    convert_result = self.convert_attr_value(attr, self.option_types[index])
+                    if not convert_result[0]: # Convert not success
+                        self.set_state(f"Value '{attr}' for {self.option_names[index]} "
+                                       f"must be a {self.option_types[index]}! Check your entered "
+                                        "value and retry.", color="pink")
+                        self.select_field(block_index, index, silent=True)
+                    result.append(convert_result[1])
                 else: # If is not string, we treat it as already in correct type
                     result.append(attr)
             self.curr_config[block_index] = result.copy()
@@ -185,9 +186,11 @@ class EditWindow(tk.Toplevel):
     def add_block(self):
         """When adding a new glass block."""
         self._new_blocks_count += 1
+        dynamics = {
+            "new_blocks_count": str(self._new_blocks_count), 
+            }
         self.curr_config.append(
-            [f"New glass block #{self._new_blocks_count}", 
-            random.randint(0, 300), random.randint(0, 300), 250, 250, 30, 15, 2, "#ffffff", 0.3]
+            [v() if callable(v) else str(v).format(**dynamics) for v in self.new_template]
             )
         self.load_curr_config()
         self.set_state(f"Added new glass block {self._new_blocks_count}.")
@@ -229,13 +232,19 @@ class EditWindow(tk.Toplevel):
 if __name__ == "__main__":
     # Test
     test_conf = []
+    conf_list = {
+        "Comment": "str", 
+        "Test attr 1 (String)": "str", 
+        "Test attr 2 (Integer)": "int", 
+        "Test attr 2 (Hex color)": "hex_color", 
+        }
     root = tk.Tk()
-    edit_window = EditWindow(test_conf)
+    edit_window = EditWindow(test_conf, glass_options=conf_list)
     ttk.Button(root, text = "Hit me to show edit window", command=edit_window.show)\
         .pack(padx=15, pady=15, fill=tk.BOTH, expand=True)
     ttk.Button(root, text = "Print current config", command=lambda: print(test_conf))\
         .pack(padx=15, pady=15, fill=tk.BOTH, expand=True)
     root.title("Root tkinter window")
     root.minsize(240, 200)
-    edit_window.show()
+    # edit_window.show()
     root.mainloop()

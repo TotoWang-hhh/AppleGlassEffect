@@ -22,50 +22,6 @@ from dependencies.pygame_text import Text
 from liquidglass import LiquidGlass
 
 
-def get_between(original: int | float, min_value: int | float, 
-                max_value: int | float) -> int | float: 
-    if original < min_value:
-        result = min_value
-    elif original > max_value:
-        result = max_value
-    else:
-        result = original
-    return result
-
-def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
-    if hex_color.startswith("#"):
-        hex_color = hex_color[1:]
-    
-    if not re.fullmatch(r"([0-9a-fA-F]{6})$", hex_color):
-        # If not a valid hex color, return green
-        return (0, 255, 0)
-
-    return (
-        int(hex_color[0:2], 16),
-        int(hex_color[2:4], 16),
-        int(hex_color[4:6], 16),
-    )
-
-def error_detected():
-    if msgbox.askokcancel("Liquid Glass Playground: Error Detected", 
-        "An error may be detected by internal code, and a force quit of this program was "
-        "requested. \n\n"
-        "You may also choose to ignore anyway, but please note that continue running this program "
-        "may cause unexpected behavior and more following errors.\n\n"
-        "The issues page of this project, where you can provide feedback, will then be opened in "
-        "your browser. The console will be left open for you to copy relavent debug information "
-        "if you accept to quit before the program actually terminates.\n\n"
-        "\nProceed?"
-        ):
-        webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/issues")
-        input("\n\nCopy anything helpful from the console, then hit [ENTER] to quit... ")
-        os._exit(1)
-    else:
-        if msgbox.askyesno(
-            "Feedback Anyway?", "Would you still like to go to the issues page for a feedback?"
-            ):
-            webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/issues")
-
 def load_image(path):
     global win, wallpaper
     if path in [None, "", 0, False]:

@@ -12,7 +12,7 @@ import os
 
 import webbrowser
 
-import numpy as np
+import random
 
 import re
 
@@ -20,7 +20,7 @@ from dependencies.edit_window import EditWindow
 from dependencies.pygame_text import Text
 # from dependencies.error_detected import error_detected
 
-from liquidglass import LiquidGlass
+from liquidglass import LiquidGlass, LiquidGlassButton
 
 
 def get_between(original: int | float, min_value: int | float, 
@@ -57,11 +57,12 @@ def load_image(path):
     win.blit(image, (0,0))
 
 def construct_blocks(window, config):
-    glass_blocks: list[LiquidGlass] = []
-    for block_args in config:
-        glass_blocks.append(LiquidGlass(window, 
-            block_args[1], block_args[2], block_args[3], block_args[4], block_args[5], 
-            block_args[6], block_args[7], block_args[8], block_args[9]))
+    glass_blocks: list[LiquidGlassButton] = []
+    for block_configs in config:
+        block_args = [v for v in block_configs]
+        block_args[0] = window
+        print(block_args)
+        glass_blocks.append(LiquidGlassButton(*block_args))
     return glass_blocks
 
 def draw_all():
@@ -139,9 +140,7 @@ class Test():
 
 # Some global configs
 curr_img_path = ""
-glass_blocks_conf = [
-    ("Default glass block", 50, 200, 250, 250, 30, 15, 2, "#ffffff", 0.3)
-    ]
+glass_blocks_conf = []
 
 # Initialize the main window
 pygame.init()
@@ -151,7 +150,43 @@ SCREEN_SIZE = pygame.display.list_modes()[0]
 loop_events = []
 
 # Initialize the edit window
-edit_window = EditWindow(glass_blocks_conf)
+glass_options = {
+    "Comment": "str", 
+    "X-position": "int", 
+    "Y-position": "int", 
+    "Width": "int", 
+    "Height": "int", 
+    "Depth (Z-height)": "int", 
+    "Round corner radius": "int", 
+    "Blur radius": "int", 
+    "Background color": "hex_color", 
+    "Alpha": "float", 
+    "Text": "str", 
+    "Text font": "str", 
+    "Text size": "int", 
+    "Text color": "hex_color", 
+    }
+new_glass_template = [
+    "New glass button {new_blocks_count}", 
+    lambda: random.randint(0, 300), 
+    lambda: random.randint(0, 300), 
+    250, 
+    250, 
+    30, 
+    15, 
+    2, 
+    "#ffffff", 
+    0.2, 
+    "Hello world!", 
+    "Arial", 
+    32, 
+    "#000000", 
+    ]
+edit_window = EditWindow(
+    glass_blocks_conf, 
+    glass_options=glass_options, 
+    new_template=new_glass_template
+    )
 
 # Initialize texts and buttons on main window
 options = {
@@ -166,6 +201,11 @@ options = {
     "Redraw all": draw_all,
     }
 option_buttons = make_option_buttons(win, options)
+
+# New glass template
+default_glass_conf = [v() if callable(v) else v for v in new_glass_template]
+default_glass_conf[0] = "Default glass button"
+glass_blocks_conf.append(tuple(default_glass_conf))
 
 # Initial draw
 draw_all()

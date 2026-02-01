@@ -20,8 +20,6 @@ class LiquidGlass():
             blur: int = 2, 
             background: str = "#ffffff", 
             alpha: float = 0.2, 
-            text: str = "", 
-            text_color: str = "#000000", 
             ):
         self.parent: pygame.Surface = parent
         self.x: int = x
@@ -34,8 +32,6 @@ class LiquidGlass():
         bg_rgb: tuple = hex_to_rgb(background)
         self.translucent: tuple = (bg_rgb[0], bg_rgb[1], bg_rgb[2], int(alpha * 255))
         self.highlight_thickness: int = int(max(self.w, self.h) * 0.01)
-        self.text: str = text
-        self.text_color: tuple = hex_to_rgb(text_color)
 
     def calc_distance_to_edge(self, point: tuple[int, int]) -> list[int]:
         # Handle edge: The rectangle shaped edge where the code handles
@@ -154,6 +150,41 @@ class LiquidGlass():
                         border_radius=self.radius)
         self.parent.blit(overlay, (self.x, self.y))
         del overlay
+
+
+class LiquidGlassButton(LiquidGlass):
+    
+    def __init__(
+            self, 
+            parent: pygame.Surface, 
+            x: int, 
+            y: int, 
+            w: int, 
+            h: int, 
+            z: int = 15, 
+            radius: int = 15, 
+            blur: int = 2, 
+            background: str = "#ffffff", 
+            alpha: float = 0.2, 
+            text: str = "", 
+            font: str = "Arial", 
+            fontsize: int = 32, 
+            text_color: str = "#000000", 
+            **kwargs, 
+            ):
+        LiquidGlass.__init__(self, parent, x, y, w, h, z, radius, blur, background, alpha)
+        self.text: str = text
+        self.font: tuple = (font, fontsize)
+        self.text_color: tuple = hex_to_rgb(text_color)
+
+    def render(self):
+        LiquidGlass.render(self)
+        if self.text != "":
+            font = pygame.font.SysFont(self.font[0], self.font[1])
+            surface = font.render(self.text, True, self.text_color)
+            text_x = self.x + (self.w - surface.get_size()[0]) // 2
+            text_y = self.y + (self.w - surface.get_size()[1]) // 2
+            self.parent.blit(surface, (text_x, text_y))
 
 
 def get_between(original: int | float, min_value: int | float, 
