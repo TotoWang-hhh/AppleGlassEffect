@@ -6,6 +6,7 @@ import tkinter as tk
 import tkinter.filedialog as filebox
 import tkinter.messagebox as msgbox
 tkroot = tk.Tk()
+tkroot.update()
 tkroot.withdraw()
 
 import os
@@ -61,7 +62,7 @@ def construct_blocks(window, config):
     for block_configs in config:
         block_args = [v for v in block_configs]
         block_args[0] = window
-        print(block_args)
+        # print(block_args)
         glass_blocks.append(LiquidGlassButton(*block_args))
     return glass_blocks
 
@@ -144,9 +145,9 @@ glass_blocks_conf = []
 
 # Initialize the main window
 pygame.init()
-win = pygame.display.set_mode(size=(1280,720))
+win = pygame.display.set_mode((1280,720), pygame.SCALED)
 pygame.display.set_caption("Liquid Glass Playground")
-SCREEN_SIZE = pygame.display.list_modes()[0]
+SCREEN_SIZE = (tkroot.winfo_screenwidth(), tkroot.winfo_screenheight())
 loop_events = []
 
 # Initialize the edit window
@@ -177,7 +178,7 @@ new_glass_template = [
     2, 
     "#ffffff", 
     0.2, 
-    "Hello world!", 
+    "Hello world! {new_blocks_count}", 
     "Arial", 
     32, 
     "#000000", 
@@ -185,7 +186,8 @@ new_glass_template = [
 edit_window = EditWindow(
     glass_blocks_conf, 
     glass_options=glass_options, 
-    new_template=new_glass_template
+    new_template=new_glass_template, 
+    on_hide=draw_all, 
     )
 
 # Initialize texts and buttons on main window
@@ -202,9 +204,10 @@ options = {
     }
 option_buttons = make_option_buttons(win, options)
 
-# New glass template
+# Default glass
 default_glass_conf = [v() if callable(v) else v for v in new_glass_template]
 default_glass_conf[0] = "Default glass button"
+default_glass_conf[list(glass_options.keys()).index("Text")] = "Hello world!"
 glass_blocks_conf.append(tuple(default_glass_conf))
 
 # Initial draw

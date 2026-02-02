@@ -20,7 +20,8 @@ class EditWindow(tk.Toplevel):
             self, 
             glass_blocks_conf: list, 
             glass_options: dict, 
-            new_template: list | None = None
+            new_template: list | None = None, 
+            on_hide: typing.Callable | None = None, 
             ):
         # Initialize as a tkinter window
         tk.Toplevel.__init__(self)
@@ -36,6 +37,7 @@ class EditWindow(tk.Toplevel):
         self.glass_blocks_conf = glass_blocks_conf
         self.curr_config = []
         # Misc
+        self.on_hide = on_hide
         self._new_blocks_count = 0
         self.selected_block_index = -1 # -1 for not selected
         # Widgets inside window
@@ -90,6 +92,7 @@ class EditWindow(tk.Toplevel):
         # print(glass_blocks_conf)
         self.withdraw()
         self.set_state("The window should be hidden now.", color="pink")
+        self.on_hide() if self.on_hide != None else None
     
     def set_state(self, text: str, color: str | None="lightgreen"):
         """Set content in state indicator."""
@@ -143,12 +146,12 @@ class EditWindow(tk.Toplevel):
             case "str":
                 return True, value
             case "int":
-                if value.isdigit():
+                if (value[1:] if value[0] == "-" else value).isdigit():
                     return True, int(value)
                 else:
                     return False, 0
             case "float":
-                if value.replace('.', '', 1).isdigit():
+                if (value[1:] if value[0] == "-" else value).replace('.', '', 1).isdigit():
                     return True, float(value)
                 else:
                     return False, 0
@@ -174,9 +177,10 @@ class EditWindow(tk.Toplevel):
                     convert_result = self.convert_attr_value(attr, self.option_types[index])
                     if not convert_result[0]: # Convert not success
                         self.set_state(f"Value '{attr}' for {self.option_names[index]} "
-                                       f"must be a {self.option_types[index]}! Check your entered "
-                                        "value and retry.", color="pink")
+                                       f"must be in type {self.option_types[index]}! Check your "
+                                        "entered value and retry.", color="pink")
                         self.select_field(block_index, index, silent=True)
+                        return None
                     result.append(convert_result[1])
                 else: # If is not string, we treat it as already in correct type
                     result.append(attr)

@@ -78,11 +78,39 @@ class LiquidGlass():
     def render(self):
         """This is used to draw or update the liquid glass block"""
         ### Off-screen calculated layers
-        ## Basic backdrop blur, written by GitHub Copilot
-        rect = pygame.Rect(self.x, self.y, self.w, self.h)
-        bg_surface = self.parent.subsurface(rect).copy()
+        ## Sample the background
+        parent_size = self.parent.get_size()
+        if self.x < 0 or self.x + self.w > parent_size[0]:
+            crop_w = min(
+                self.w + self.x,  # Out of left bound
+                self.w - ((self.w + self.x) - parent_size[0]) # Out of right bound
+                )
+            if crop_w < 0: # Totally out of parent bound
+                return # Skip rendering
+        else:
+            crop_w = self.w
+        if self.y < 0 or self.y + self.h > parent_size[1]:
+            crop_h = min(
+                self.h + self.y,  # Out of left bound
+                self.h - ((self.h + self.y) - parent_size[1]) # Out of right bound
+                )
+            if crop_h < 0: # Totally out of parent bond
+                return # Skip rendering
+        else:
+            crop_h = self.w
+        if crop_w != self.w or crop_h != self.h:
+            # Out of parent bound, needs crop on background
+            crop_rect = pygame.Rect(max(0, self.x), max(0, self.y), crop_w, crop_h)
+            bg_cropped = self.parent.subsurface(crop_rect).copy()
+            bg_surface = pygame.Surface((self.w, self.h))
+            bg_surface.blit(bg_cropped, (abs(min(0, self.x)), abs(min(0, self.y))))
+        else:
+            # Otherwise directly sample the region
+            rect = pygame.Rect(self.x, self.y, self.w, self.h)
+            bg_surface = self.parent.subsurface(rect).copy()
         arr = pygame.surfarray.array3d(bg_surface)
         arr = np.transpose(arr, (1, 0, 2))
+        ## Basic backdrop blur, written by GitHub Copilot
         if self.blur != 0:
             pil_img = Image.fromarray(arr)
             # Blur
