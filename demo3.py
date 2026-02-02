@@ -53,7 +53,7 @@ def draw_all():
 
 def select_image():
     change_image(filebox.askopenfilename
-                 (title="Select an image to use as background"))
+                 (title="Select an image to use as background", initialdir="./test_imgs/"))
 
 def change_image(path):
     global curr_img_path

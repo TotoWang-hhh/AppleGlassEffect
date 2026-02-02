@@ -198,7 +198,7 @@ options = {
     "2025 by rgzz666": lambda: webbrowser.open("https://github.com/TotoWang-hhh"),
     "Load image": \
         lambda: change_image(filebox.askopenfilename(
-            title="Select an image to use as background")),
+            title="Select an image to use as background", initialdir="./test_imgs/")),
     "Open edit window": edit_window.show,
     "Redraw all": draw_all,
     }
