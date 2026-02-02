@@ -148,7 +148,7 @@ class Test():
 # Initialize the main window
 pygame.init()
 win = pygame.display.set_mode(size=(1280,720))
-pygame.display.set_caption("Liquid Glass Playground")
+pygame.display.set_caption("Liquid Glass Real-time Rendering")
 SCREEN_SIZE = pygame.display.list_modes()[0]
 loop_events = []
 
