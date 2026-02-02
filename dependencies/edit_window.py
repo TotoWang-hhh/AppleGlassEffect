@@ -41,8 +41,10 @@ class EditWindow(tk.Toplevel):
         self._new_blocks_count = 0
         self.selected_block_index = -1 # -1 for not selected
         # Widgets inside window
+        ## State part
         self.state_part = tk.Label(self, text="Initializing...", bg="yellow", anchor=tk.W)
         self.state_part.pack(fill=tk.X, side=tk.BOTTOM)
+        ## Left part
         self.left_part = ttk.LabelFrame(self, text="Glass blocks")
         ttk.Button(self.left_part, text="+ Add", 
                    command=self.add_block).pack(fill=tk.X, side=tk.BOTTOM)
@@ -52,6 +54,19 @@ class EditWindow(tk.Toplevel):
         self.glass_list.pack(fill=tk.BOTH, expand=True)
         self.glass_list.bind("<<ListboxSelect>>", self.select_block)
         self.left_part.pack(side = tk.LEFT, fill = tk.Y)
+        ## Rendering order
+        self.order_area = ttk.LabelFrame(self, text="Rendering Order")
+        tk.Label(self.order_area, 
+                 text="Rendering order decides the occlusion relationship of the glass blocks.")\
+                 .pack(fill=tk.X)
+        ttk.Button(self.order_area, text="↑ Move current block up", 
+                   command=lambda: self.move_block(-1))\
+            .pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(self.order_area, text="↓ Move current block down", 
+                   command=lambda: self.move_block(+1))\
+            .pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        self.order_area.pack(fill=tk.X)
+        ## Options
         self.options_area = ttk.LabelFrame(self, text="Options")
         self.options_area.pack(fill = tk.BOTH, expand = True)
         self.option_entries = EditableTreeview(self.options_area, ["Attribute", "Value"], 
@@ -116,7 +131,7 @@ class EditWindow(tk.Toplevel):
         self.glass_list.delete(0, tk.END)
         for index, block in enumerate(self.curr_config):
             # print(f"Load {block[0]} into edit window")
-            self.glass_list.insert(tk.END, f"[{index}] {block[0]}")
+            self.glass_list.insert(tk.END, f"[{index + 1}] {block[0]}")
 
     def select_block(self, _: typing.Any=None, silent: bool=False):
         """When selecting a glass block in list."""
@@ -146,11 +161,15 @@ class EditWindow(tk.Toplevel):
             case "str":
                 return True, value
             case "int":
+                if value == "":
+                    value = "0"
                 if (value[1:] if value[0] == "-" else value).isdigit():
                     return True, int(value)
                 else:
                     return False, 0
             case "float":
+                if value == "":
+                    value = "0.0"
                 if (value[1:] if value[0] == "-" else value).replace('.', '', 1).isdigit():
                     return True, float(value)
                 else:
@@ -211,6 +230,18 @@ class EditWindow(tk.Toplevel):
         self.curr_config.pop(selected_index[0])
         self.load_curr_config()
 
+    def move_block(self, to: int):
+        """Move selected block up / down."""
+        target_place = self.selected_block_index + to
+        if target_place < 0 or target_place > len(self.curr_config) - 1:
+            # If target place if out of the list
+            return
+        temp = self.curr_config[self.selected_block_index]
+        self.curr_config.pop(self.selected_block_index)
+        self.curr_config.insert(self.selected_block_index + to, temp)
+        self.selected_block_index = target_place
+        self.load_curr_config()
+
     def on_enter_edit(self, editing_row):
         """When entering edit attribute mode."""
         if self.option_entries.editing_row == None:
@@ -228,9 +259,10 @@ class EditWindow(tk.Toplevel):
         glass_name = self.glass_list.get(self.selected_block_index)
         after_value = after_values[1]
         self.set_state(f"Modified attribute '{attr_name}' for {glass_name} to '{after_value}'.")
-        # Save to config buffer
+        # Save to config buffer and reload
         self.curr_config[self.selected_block_index][self.option_entries.index(editing_row)] = \
             after_value
+        self.load_curr_config()
 
 
 if __name__ == "__main__":
