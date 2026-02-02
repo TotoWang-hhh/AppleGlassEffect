@@ -7,6 +7,7 @@ import tkinter.ttk as ttk
 import tkinter.filedialog as filebox
 import tkinter.messagebox as msgbox
 tkroot = tk.Tk()
+tkroot.update()
 tkroot.withdraw()
 
 import webbrowser
@@ -15,7 +16,6 @@ import os
 
 import random
 
-import re
 import time
 
 from dependencies.pygame_text import Text
@@ -149,7 +149,7 @@ class Test():
 pygame.init()
 win = pygame.display.set_mode(size=(1280,720))
 pygame.display.set_caption("Liquid Glass Real-time Rendering")
-SCREEN_SIZE = pygame.display.list_modes()[0]
+SCREEN_SIZE = (tkroot.winfo_screenwidth(), tkroot.winfo_screenheight())
 loop_events = []
 
 # Some global configs
