@@ -13,7 +13,8 @@ mkdir ".\finals\icons\"
 copy ".\icons\*" ".\finals\icons\"
 mkdir ".\finals\test_imgs\"
 copy ".\test_imgs\*" ".\finals\test_imgs\"
-copy ".\README.md*" ".\finals"
+copy ".\README.md" ".\finals"
+copy ".\liquidglass.py" ".\finals"
 echo Cleaning up...
 rmdir /s .\dist\
 rmdir /s .\build\
