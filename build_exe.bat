@@ -6,7 +6,7 @@ echo Copying files...
 mkdir ".\finals\"
 copy ".\dist\demo1\demo1.exe" ".\finals\Old Method (Demo 1).exe"
 copy ".\dist\demo2\demo2.exe" ".\finals\Playground (Demo 2).exe"
-copy ".\dist\demo3\demo3.exe" ".\finals\Read-time Rendering (Demo 3).exe"
+copy ".\dist\demo3\demo3.exe" ".\finals\Real-time Rendering (Demo 3).exe"
 mkdir ".\finals\_internal\"
 xcopy /e ".\dist\demo2\_internal\" ".\finals\"
 mkdir ".\finals\icons\"
