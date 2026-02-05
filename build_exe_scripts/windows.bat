@@ -1,7 +1,8 @@
+cd ..
 echo Building executables...
-pyinstaller -i ./icons/icon1.ico  -w demo1.py
-pyinstaller -i ./icons/icon2.ico  -w demo2.py
-pyinstaller -i ./icons/icon3.ico  -w demo3.py
+pyinstaller -i ./icons/icon1.ico --noconfirm -w demo1.py
+pyinstaller -i ./icons/icon2.ico --noconfirm -w demo2.py
+pyinstaller -i ./icons/icon3.ico --noconfirm -w demo3.py
 echo Copying files...
 mkdir ".\finals\"
 copy ".\dist\demo1\demo1.exe" ".\finals\Old Method (Demo 1).exe"
