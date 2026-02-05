@@ -1,5 +1,4 @@
 echo Many thanks to CodeCrafter-TL for developing and testing of this script!
-cd ..
 echo Building executables...
 pyinstaller -i ./icons/icon2.ico --noconfirm --log-level=ERROR -w demo_launcher.py
 echo Demos built
