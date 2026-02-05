@@ -16,6 +16,7 @@ class LiquidGlass():
             w: int, 
             h: int, 
             z: int = 15, 
+            diffusion: float | int=1, 
             radius: int = 15, 
             blur: int = 2, 
             background: str = "#ffffff", 
@@ -27,6 +28,7 @@ class LiquidGlass():
         self.w: int = w
         self.h: int = h
         self.z: int = z
+        self.diffusion: float | int = diffusion
         self.radius: int = radius
         self.blur: int = blur
         bg_rgb: tuple = hex_to_rgb(background)
@@ -68,17 +70,43 @@ class LiquidGlass():
                 result[1-direction] = d_shape
         return result
 
-    def calc_deflection_offset(self, distance_to_edge:int, max_deflection: int) -> int:
+    def calc_deflection_offset(self, distance_to_edge: int, max_deflection: int) -> int:
         if not 0 < distance_to_edge < self.z:
             return 0
         offset = (max_deflection / self.z ** 4) * (distance_to_edge - self.z) ** 4
         offset = int(round(offset, 0))
         return offset
+    
+    def calc_diffusion_offset(self, distance_to_edge: tuple | list, curr_point: tuple | list)\
+          -> tuple[int, int]: 
+        # Skip if diffusion <= 1
+        if self.diffusion <= 1:
+            return (0, 0)
+        # Offset direction
+        direction = [
+            -1 if curr_point[0] < self.x / 2 else 1, 
+            -1 if curr_point[1] < self.y / 2 else 1, 
+            ]
+        # Offset
+        x_offset, y_offset = (0, 0)
+        if distance_to_edge[0] < self.z:
+            y_scale = ((self.diffusion - 1) / self.z ** 2 ) * (distance_to_edge[0] - self.z) ** 2 + 1
+            # if curr_point[1] == self.radius + 1:
+            #     print(y_scale)
+            d_mid_y = abs(self.y / 2 - curr_point[1]) # Distance to midpoint in y direction
+            y_offset = (d_mid_y // y_scale - d_mid_y) * direction[1]
+        if distance_to_edge[1] < self.z:
+            x_scale = 2 - (((self.diffusion - 1) / self.z ** 2) * (distance_to_edge[1] - self.z) ** 2 + 1)
+            if curr_point[0] == self.radius + 1:
+                print(x_scale)
+            d_mid_x = abs(self.x / 2 - curr_point[1]) # Distance to midpoint in x direction
+            x_offset = (d_mid_x // x_scale - d_mid_x) * direction[0]
+        return  x_offset, y_offset
 
     def render(self):
         """This is used to draw or update the liquid glass block"""
-        ### Off-screen calculated layers
-        ## Sample the background
+        #### Off-screen calculated layers
+        ### Sample the background
         parent_size = self.parent.get_size()
         if self.x < 0 or self.x + self.w > parent_size[0]:
             crop_w = min(
@@ -110,7 +138,7 @@ class LiquidGlass():
             bg_surface = self.parent.subsurface(rect).copy()
         arr = pygame.surfarray.array3d(bg_surface)
         arr = np.transpose(arr, (1, 0, 2))
-        ## Basic backdrop blur, written by GitHub Copilot
+        ### Basic backdrop blur, written by GitHub Copilot
         if self.blur != 0:
             pil_img = Image.fromarray(arr)
             # Blur
@@ -124,7 +152,7 @@ class LiquidGlass():
             arr = np.array(pil_img)
         else:
             arr = arr
-        ## Deflection, the key part must be self-written :)
+        ### Light distortion, the key part must be self-written :)
         pixels_origin = arr.copy()
         for y in range(len(arr)):
             for x in range(len(arr[y])):
@@ -135,9 +163,14 @@ class LiquidGlass():
                 distance_to_edge = self.calc_distance_to_edge((x, y))
                 if distance_to_edge[0] > 0 and distance_to_edge[1] > 0: 
                     # ↑ This means that the pixel is within the shape
+                    ## Deflection
                     # Calc after x and y base on distance to edge
                     x_offset = self.calc_deflection_offset(distance_to_edge[0], self.w)
                     y_offset = self.calc_deflection_offset(distance_to_edge[1], self.h)
+                    ## Diffusion
+                    diffusion_offset = self.calc_diffusion_offset(distance_to_edge, (x, y))
+                    x_offset += diffusion_offset[0]
+                    y_offset += diffusion_offset[1]
                     # If is right / bottom side, negative the offset
                     if x > (self.w - self.z):
                         x_offset = - x_offset
@@ -150,7 +183,7 @@ class LiquidGlass():
                     after_y = int(get_between(after_y, 0, self.h - 1))
                     # Handle the offset
                     arr[y][x] = pixels_origin[after_y][after_x]
-        # Draw deflection
+        ### Draw deflection
         match len(arr[0][0]):
             case 3:
                 color_type = "RGB"
@@ -159,8 +192,8 @@ class LiquidGlass():
         handled_surface = pygame.image.frombuffer(arr.tobytes(), (self.w, self.h), 
                                                   color_type).convert_alpha()
         self.parent.blit(handled_surface, (self.x, self.y))
-        ### Overlays
-        ## Translucent layer
+        #### Overlays
+        ### Translucent layer
         overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
         pygame.draw.rect(
             overlay, 
@@ -170,7 +203,7 @@ class LiquidGlass():
             )
         self.parent.blit(overlay, (self.x, self.y))
         del overlay
-        ## Outer frame (highlight)
+        ### Outer frame (highlight)
         overlay = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
         HIGHLIGHT_ALPHA = 0.4
         pygame.draw.rect(overlay, (255, 255, 255, int(HIGHLIGHT_ALPHA * 255)), 
@@ -200,7 +233,7 @@ class LiquidGlassButton(LiquidGlass):
             text_color: str = "#000000", 
             **kwargs, 
             ):
-        LiquidGlass.__init__(self, parent, x, y, w, h, z, radius, blur, background, alpha)
+        LiquidGlass.__init__(self, parent, x, y, w, h, z, 1.2, radius, blur, background, alpha)
         self.text: str = text
         self.font: tuple = (font, fontsize)
         self.text_color: tuple = hex_to_rgb(text_color)
