@@ -49,7 +49,7 @@ def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     )
 
 def load_image(path):
-    global win, option_buttons
+    global win
     if path in [None, "", 0, False]:
         win.fill((0, 0, 0))
         return
@@ -67,12 +67,13 @@ def construct_blocks(window, config):
     return glass_blocks
 
 def draw_all():
-    global win, glass_blocks_conf, curr_img_path, option_buttons
+    global win, glass_blocks_conf, curr_img_path, option_buttons, window_content
     load_image(curr_img_path) # Reload image first to cover any proviously drawn stuff
     glass_blocks = construct_blocks(win, glass_blocks_conf)
     for block in glass_blocks:
         block.render()
     draw_options(option_buttons=option_buttons) # Draw options finally to get it on top
+    # window_content = win.subsurface(pygame.Rect((0, 0), win.get_size())).copy()
 
 def change_image(path):
     global curr_img_path
@@ -150,6 +151,17 @@ pygame.display.set_caption("Liquid Glass Playground")
 SCREEN_SIZE = (tkroot.winfo_screenwidth(), tkroot.winfo_screenheight())
 loop_events = []
 
+# Instructions
+INSTRUCTIONS = (
+    "Underlined texts in the main window can be clicked, work like buttons.\n\n"
+    "This demo allows you to add multiple Liquid Glass buttons and customsize configurations of "
+    "them. To get started, click the [Load image] text on the top left to select a wallpaper, then "
+    "you will see the effect. You may then click [Open edit window] text to add / remove / edit "
+    "glass buttons."
+    )
+msgbox.showinfo("Basic Instructions", f"> Basic Instructions <\n\n{INSTRUCTIONS}\n\n"
+                                       "Close this dialog to continue.")
+
 # Initialize the edit window
 glass_options = {
     "Comment": "str", 
@@ -195,6 +207,7 @@ options = {
     "Apple Liquid Glass Effect in Pygame: Demo 2 (Playground)": \
         lambda: webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/"),
     "Duplicatable glass blocks & Faster rendering": None,
+    "Tip: Underlined texts are clickable": None,
     "2025 by rgzz666": lambda: webbrowser.open("https://github.com/TotoWang-hhh"),
     "Load image": \
         lambda: change_image(filebox.askopenfilename(
@@ -212,6 +225,7 @@ glass_blocks_conf.append(tuple(default_glass_conf))
 
 # Initial draw
 draw_all()
+# window_content = win.subsurface(pygame.Rect((0, 0), win.get_size())).copy()
 
 # # The below line is for testing error detection only. Comment it in normal cases!
 # error_detected()
@@ -222,5 +236,15 @@ while True:
             loop_event(event)
         if event.type == pygame.QUIT:
             os._exit(0)
+        # # Window focus gained / loss tips
+        # if event.type == pygame.WINDOWFOCUSLOST:
+        #     win_focused = False
+        #     window_content = win.subsurface(pygame.Rect((0, 0), win.get_size())).copy()
+        #     overlay = pygame.Surface(win.get_size(), pygame.SRCALPHA)
+        #     overlay.fill((0, 0, 0, 150))
+        #     win.blit(overlay, (0, 0))
+        # elif event.type == pygame.WINDOWFOCUSGAINED:
+        #     win_focused = True
+        #     win.blit(window_content, (0, 0))
     pygame.display.update()
     tkroot.update()

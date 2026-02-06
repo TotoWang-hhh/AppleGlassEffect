@@ -71,6 +71,7 @@ def make_option_buttons(win, option_buttons: list | None=[]):
         "Apple Liquid Glass Effect in Pygame: Demo 3 (Realtime)": \
             lambda: webbrowser.open("https://github.com/TotoWang-hhh/AppleGlassEffect/"),
         "Moving glass block (Test rendering speed)": None,
+        "Tip: Underlined texts are clickable": None,
         "2025 by rgzz666": lambda: webbrowser.open("https://github.com/TotoWang-hhh"),
         "Load image": select_image,
             }
@@ -79,7 +80,8 @@ def make_option_buttons(win, option_buttons: list | None=[]):
         for option_index in range(len(options.keys())):
             option_buttons.append(Text(win, list(options.keys())[option_index], 
                                        onclick=list(options.values())[option_index], 
-                                       fontsize = 20, loop_events_list=loop_events))
+                                       fontsize = 20, loop_events_list=loop_events, 
+                                       click_again_tip=False))
     return option_buttons
 
 def draw_options(option_buttons: list=[]):
@@ -132,6 +134,15 @@ def resize(image):
     pygame.display.set_mode((new_w, new_h))
     win_w = new_w
     win_h = new_h
+    
+    # Reset glass block (to reset position)
+    global glass_blocks_conf, glass_blocks
+    glass_blocks_conf = [
+        ("Moving rounded square glass block", 50, 200, 250, 250, 30, 30, 0, "#ffffff", 0.05), 
+        ("Moving round glass block", 350, 200, 250, 250, 30, 125, 0, "#ffffff", 0.05), 
+    ]
+    glass_blocks = construct_blocks(glass_blocks_conf)
+
     return resized_img
 
 class Test():
@@ -152,13 +163,22 @@ pygame.display.set_caption("Liquid Glass Real-time Rendering")
 SCREEN_SIZE = (tkroot.winfo_screenwidth(), tkroot.winfo_screenheight())
 loop_events = []
 
+# Instructions
+INSTRUCTIONS = (
+    "Underlined texts in the main window can be clicked, work like buttons.\n\n"
+    "This demo allows you to add multiple Liquid Glass buttons and customsize configurations of "
+    "them. To get started, click the [Load image] text on the top left to select a wallpaper, then "
+    "you will see the effect. You may see stats in the left-bottom corner of the window."
+    )
+msgbox.showinfo("Basic Instructions", f"> Basic Instructions <\n\n{INSTRUCTIONS}\n\n"
+                                       "Close this dialog to continue.")
+
 # Some global configs
 curr_img_path = ""
 glass_blocks_conf = [
     ("Moving rounded square glass block", 50, 200, 250, 250, 30, 30, 0, "#ffffff", 0.05), 
     ("Moving round glass block", 350, 200, 250, 250, 30, 125, 0, "#ffffff", 0.05), 
     ]
-# glass_blocks = []
 glass_blocks = construct_blocks(glass_blocks_conf)
 movement_speed = 10
 

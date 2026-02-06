@@ -16,7 +16,6 @@ class LiquidGlass():
             w: int, 
             h: int, 
             z: int = 15, 
-            diffusion: float | int=1, 
             radius: int = 15, 
             blur: int = 2, 
             background: str = "#ffffff", 
@@ -28,7 +27,6 @@ class LiquidGlass():
         self.w: int = w
         self.h: int = h
         self.z: int = z
-        self.diffusion: float | int = diffusion
         self.radius: int = radius
         self.blur: int = blur
         bg_rgb: tuple = hex_to_rgb(background)
@@ -229,7 +227,7 @@ class LiquidGlassButton(LiquidGlass):
             text_color: str = "#000000", 
             **kwargs, 
             ):
-        LiquidGlass.__init__(self, parent, x, y, w, h, z, 1.2, radius, blur, background, alpha)
+        LiquidGlass.__init__(self, parent, x, y, w, h, z, radius, blur, background, alpha)
         self.text: str = text
         self.font: tuple = (font, fontsize)
         self.text_color: tuple = hex_to_rgb(text_color)

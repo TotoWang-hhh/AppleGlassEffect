@@ -1,18 +1,27 @@
+import typing
+
 import pygame
 import warnings
 import numpy as np
 
+import tkinter as tk
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.withdraw()
+
 
 class Text(object,):
-    def __init__(self, screen, text:str, color=(255, 255, 255), pos:tuple[int,int]=(0, 0), 
-                 fontname:str="Arial", fontsize:int=28, onclick=lambda:None, 
-                 loop_events_list:list|None=None, **kwargs):
+    def __init__(self, screen, text: str, color: tuple = (255, 255, 255), 
+                 pos: tuple[int,int] = (0, 0), fontname: str | None = "Arial", fontsize: int = 28, 
+                 onclick: typing.Callable | None = None, loop_events_list:list|None=None, 
+                 click_again_tip: bool = True):
         self.screen = screen
         self.text = text
         self.fontname = fontname
         self.fontsize = fontsize
-        font = pygame.font.SysFont(fontname, fontsize)
-        self.surface = font.render(text, True, color)
+        self.font = pygame.font.SysFont(fontname, fontsize)
+        self.font.set_underline(onclick != None)
+        self.surface = self.font.render(text, True, color)
 
         self.WIDTH = self.surface.get_width()
         self.HEIGHT = self.surface.get_height()
@@ -20,7 +29,7 @@ class Text(object,):
         self.x = pos[0]
         self.y = pos[1]
 
-        if onclick in [False, None, 0]:
+        if onclick == None:
             self.onclick = lambda:False
         else:
             if loop_events_list != None:
@@ -29,6 +38,8 @@ class Text(object,):
                 warnings.warn("Set onclick function, but will not do event check "
                               "as loop_events_list is not given")
             self.onclick = onclick
+        
+        self.click_again_tip = click_again_tip
 
     def display(self,pos:tuple[int,int]=(0,0)):
         self.x = pos[0]
@@ -59,21 +70,42 @@ class Text(object,):
                 inv_b = max(inv_b - 150, 0)
             text_color = (int(inv_r), int(inv_g), int(inv_b))
             # Re-render text with inverted color
-            font = pygame.font.SysFont(self.fontname, self.fontsize)
-            text_surface = font.render(self.text, True, text_color)
+            text_surface = self.font.render(self.text, True, text_color)
             self.screen.blit(text_surface, (self.x, self.y))
         except Exception:
             # If error, back to the original text
             warnings.warn("Not able to inver color, falling back to default (white).")
             self.screen.blit(self.surface, (self.x, self.y))
          
-    def check_click(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
+    def check_click(self, event: pygame.event.Event):
+        if event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 position = event.pos
-                x_match = position[0] > self.x and position[0] < self.x + self.WIDTH
-                y_match = position[1] > self.y and position[1] < self.y + self.HEIGHT
+                x_match = self.x < position[0] < self.x + self.WIDTH
+                y_match = self.y < position[1] < self.y + self.HEIGHT
                 if x_match and y_match:
                     return self.onclick()
                 else:
                     return False
+        elif event.type == pygame.WINDOWFOCUSGAINED and self.click_again_tip:
+            position = pygame.mouse.get_pos()
+            x_match = self.x < position[0] < self.x + self.WIDTH
+            y_match = self.y < position[1] < self.y + self.HEIGHT
+            if x_match and y_match:
+                show_click_again_tip("Click again to activate button")
+
+
+def show_click_again_tip(text="Click once more..."):
+    tip = tk.Toplevel()
+    tip.overrideredirect(True)
+    tip.attributes("-topmost", True)
+    tip.attributes("-disabled", True)
+    label = tk.Label(tip, text=text, bg="green", fg="white", padx=10, pady=5)
+    label.pack()
+
+    # Place at mouse pos
+    x, y = tip.winfo_pointerx() + 16, tip.winfo_pointery() + 16
+    tip.geometry(f"+{x}+{y}")
+
+    # 1.5 秒后自动关闭
+    tip.after(1500, tip.destroy)
