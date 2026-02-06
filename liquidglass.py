@@ -77,31 +77,31 @@ class LiquidGlass():
         offset = int(round(offset, 0))
         return offset
     
-    def calc_diffusion_offset(self, distance_to_edge: tuple | list, curr_point: tuple | list)\
-          -> tuple[int, int]: 
-        # Skip if diffusion <= 1
-        if self.diffusion <= 1:
-            return (0, 0)
-        # Offset direction
-        direction = [
-            -1 if curr_point[0] < self.x / 2 else 1, 
-            -1 if curr_point[1] < self.y / 2 else 1, 
-            ]
-        # Offset
-        x_offset, y_offset = (0, 0)
-        if distance_to_edge[0] < self.z:
-            y_scale = ((self.diffusion - 1) / self.z ** 2 ) * (distance_to_edge[0] - self.z) ** 2 + 1
-            # if curr_point[1] == self.radius + 1:
-            #     print(y_scale)
-            d_mid_y = abs(self.y / 2 - curr_point[1]) # Distance to midpoint in y direction
-            y_offset = (d_mid_y // y_scale - d_mid_y) * direction[1]
-        if distance_to_edge[1] < self.z:
-            x_scale = 2 - (((self.diffusion - 1) / self.z ** 2) * (distance_to_edge[1] - self.z) ** 2 + 1)
-            if curr_point[0] == self.radius + 1:
-                print(x_scale)
-            d_mid_x = abs(self.x / 2 - curr_point[1]) # Distance to midpoint in x direction
-            x_offset = (d_mid_x // x_scale - d_mid_x) * direction[0]
-        return  x_offset, y_offset
+    # def calc_diffusion_offset(self, distance_to_edge: tuple | list, curr_point: tuple | list)\
+    #       -> tuple[int, int]: 
+    #     # Skip if diffusion <= 1
+    #     if self.diffusion <= 1:
+    #         return (0, 0)
+    #     # Offset direction
+    #     direction = [
+    #         -1 if curr_point[0] < self.x / 2 else 1, 
+    #         -1 if curr_point[1] < self.y / 2 else 1, 
+    #         ]
+    #     # Offset
+    #     x_offset, y_offset = (0, 0)
+    #     if distance_to_edge[0] < self.z:
+    #         y_scale = ((self.diffusion - 1) / self.z ** 2 ) * (distance_to_edge[0] - self.z) ** 2 + 1
+    #         # if curr_point[1] == self.radius + 1:
+    #         #     print(y_scale)
+    #         d_mid_y = abs(self.y / 2 - curr_point[1]) # Distance to midpoint in y direction
+    #         y_offset = (d_mid_y // y_scale - d_mid_y) * direction[1]
+    #     if distance_to_edge[1] < self.z:
+    #         x_scale = 1 / (((self.diffusion - 1) / self.z ** 2) * (distance_to_edge[1] - self.z) ** 2 + 1)
+    #         # if curr_point[0] == self.radius + 1:
+    #         #     print(x_scale)
+    #         d_mid_x = abs(self.x / 2 - curr_point[1]) # Distance to midpoint in x direction
+    #         x_offset = (d_mid_x // x_scale - d_mid_x) * direction[0]
+    #     return  x_offset, y_offset
 
     def render(self):
         """This is used to draw or update the liquid glass block"""
@@ -165,12 +165,8 @@ class LiquidGlass():
                     # ↑ This means that the pixel is within the shape
                     ## Deflection
                     # Calc after x and y base on distance to edge
-                    x_offset = self.calc_deflection_offset(distance_to_edge[0], self.w)
-                    y_offset = self.calc_deflection_offset(distance_to_edge[1], self.h)
-                    ## Diffusion
-                    diffusion_offset = self.calc_diffusion_offset(distance_to_edge, (x, y))
-                    x_offset += diffusion_offset[0]
-                    y_offset += diffusion_offset[1]
+                    x_offset = self.calc_deflection_offset(distance_to_edge[0], min(int(self.z * 1.5), self.w))
+                    y_offset = self.calc_deflection_offset(distance_to_edge[1], min(int(self.z * 1.5), self.h))
                     # If is right / bottom side, negative the offset
                     if x > (self.w - self.z):
                         x_offset = - x_offset
