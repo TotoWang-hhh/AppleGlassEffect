@@ -165,8 +165,8 @@ class LiquidGlass():
                     # ↑ This means that the pixel is within the shape
                     ## Deflection
                     # Calc after x and y base on distance to edge
-                    x_offset = self.calc_deflection_offset(distance_to_edge[0], min(int(self.z * 1.5), self.w))
-                    y_offset = self.calc_deflection_offset(distance_to_edge[1], min(int(self.z * 1.5), self.h))
+                    x_offset = self.calc_deflection_offset(distance_to_edge[0], self.w)
+                    y_offset = self.calc_deflection_offset(distance_to_edge[1], self.h)
                     # If is right / bottom side, negative the offset
                     if x > (self.w - self.z):
                         x_offset = - x_offset
