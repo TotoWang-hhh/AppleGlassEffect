@@ -15,9 +15,9 @@ class LiquidGlass():
             y: int, 
             w: int, 
             h: int, 
-            z: int = 15, 
+            z: int = 30, 
             radius: int = 15, 
-            blur: int = 2, 
+            blur: int = 1, 
             background: str = "#ffffff", 
             alpha: float = 0.2, 
             ):
@@ -71,7 +71,8 @@ class LiquidGlass():
     def calc_deflection_offset(self, distance_to_edge: int, max_deflection: int) -> int:
         if not 0 < distance_to_edge < self.z:
             return 0
-        offset = (max_deflection / self.z ** 4) * (distance_to_edge - self.z) ** 4
+        N: int = 4
+        offset = (max_deflection / self.z ** N) * (distance_to_edge - self.z) ** N
         offset = int(round(offset, 0))
         return offset
     
@@ -216,9 +217,9 @@ class LiquidGlassButton(LiquidGlass):
             y: int, 
             w: int, 
             h: int, 
-            z: int = 15, 
+            z: int = 30, 
             radius: int = 15, 
-            blur: int = 2, 
+            blur: int = 1, 
             background: str = "#ffffff", 
             alpha: float = 0.2, 
             text: str = "", 

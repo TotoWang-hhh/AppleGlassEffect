@@ -156,7 +156,7 @@ INSTRUCTIONS = (
     "Underlined texts in the main window can be clicked, work like buttons.\n\n"
     "This demo allows you to add multiple Liquid Glass buttons and customsize configurations of "
     "them. To get started, click the [Load image] text on the top left to select a wallpaper, then "
-    "you will see the effect. You may then click [Open edit window] text to add / remove / edit "
+    "you will see the effect. You may then click [Open edit window] text to add, remove or edit "
     "glass buttons."
     )
 msgbox.showinfo("Basic Instructions", f"> Basic Instructions <\n\n{INSTRUCTIONS}\n\n"
@@ -187,7 +187,7 @@ new_glass_template = [
     250, 
     30, 
     15, 
-    2, 
+    1, 
     "#ffffff", 
     0.2, 
     "Hello world! {new_blocks_count}", 

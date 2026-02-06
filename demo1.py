@@ -18,84 +18,14 @@ import math
 
 from PIL import Image, ImageFilter, ImageDraw
 
+from dependencies.pygame_text import Text
+
+
 class Config:
     HIGHLIGHT_DEFLECTION_HANDLED = False
     SHOW_GLASS_TOPOGRAPHY = False
     SHOW_HANDLED_ONLY = False
     OUTPUT_ROUNDED_CORNER_POINTS_DATA = False
-
-class Text(object,):
-    def __init__(self, screen, text:str, color=(255, 255, 255), pos:tuple[int,int]=(0, 0), 
-                 fontname:str="Arial", fontsize:int=28, onclick=lambda: None, 
-                 loop_events_list:list|None=None, **kwargs):
-        self.screen = screen
-        self.text = text
-        self.fontname = fontname
-        self.fontsize = fontsize
-        font = pygame.font.SysFont(fontname, fontsize)
-        self.surface = font.render(text, True, color)
-
-        self.WIDTH = self.surface.get_width()
-        self.HEIGHT = self.surface.get_height() 
-
-        self.x = pos[0]
-        self.y = pos[1]
-
-        if onclick in [False, None, 0]:
-            self.onclick = lambda:False
-        else:
-            if loop_events_list != None:
-                loop_events_list.append(lambda event: self.check_click(event))
-            else:
-                warnings.warn("Set onclick function, but will not do event check as loop_events_list is not given")
-            self.onclick = onclick
-
-    def display(self,pos:tuple[int,int]=(0,0)):
-        self.x = pos[0]
-        self.y = pos[1]
-
-        rect = pygame.Rect(self.x, self.y, self.WIDTH, self.HEIGHT)
-        # Code to inverse text color, written by GitHub Copilot
-        try:
-            # Sample background at text area
-            sub_surface = self.screen.subsurface(rect).copy()
-            arr = pygame.surfarray.array3d(sub_surface)
-            # Calc avg color
-            avg_color = np.mean(arr.reshape(-1, 3), axis=0)
-            r, g, b = avg_color.astype(int)
-            # Invert color
-            inv_r, inv_g, inv_b = 255 - r, 255 - g, 255 - b
-            # Calc lightness, and change if necessary
-            lum = 0.299*inv_r + 0.587*inv_g + 0.114*inv_b
-            if lum < 128 and lum > 100:
-                # If too dark
-                inv_r = min(inv_r + 150, 255)
-                inv_g = min(inv_g + 150, 255)
-                inv_b = min(inv_b + 150, 255)
-            elif lum >= 128 and lum < 150:
-                # If too light
-                inv_r = max(inv_r - 150, 0)
-                inv_g = max(inv_g - 150, 0)
-                inv_b = max(inv_b - 150, 0)
-            text_color = (int(inv_r), int(inv_g), int(inv_b))
-            # Re-render text with inverted color
-            font = pygame.font.SysFont(self.fontname, self.fontsize)
-            text_surface = font.render(self.text, True, text_color)
-            self.screen.blit(text_surface, (self.x, self.y))
-        except Exception:
-            # If error, back to the origina; text
-            self.screen.blit(self.surface, (self.x, self.y))
-         
-    def check_click(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                position = event.pos
-                x_match = position[0] > self.x and position[0] < self.x + self.WIDTH
-                y_match = position[1] > self.y and position[1] < self.y + self.HEIGHT
-                if x_match and y_match:
-                    return self.onclick()
-                else:
-                    return False
 
 def get_between(original:Union[int, float], min_value:Union[int, float], 
                 max_value:Union[int, float]) -> Union[int, float]:
@@ -117,7 +47,7 @@ def load_image(path):
 
 def draw_all():
     width, height = [int(item*0.7) for item in win.get_size()]
-    render(width, height, 15, 5, 25)
+    render(width, height, 15, 2, 25)
     draw_rect(win, width, height, 25)
     draw_options(win, option_buttons=option_buttons) # Draw options finally to get it on top
 
@@ -128,11 +58,13 @@ def change_image(path):
 def draw_options(win, option_buttons:list|None=None):
     if option_buttons == None:
         option_buttons = []
-    options = {"2025 by rgzz666": lambda: webbrowser.open("https://github.com/totowang-hhh"),
-               "Load image": lambda: change_image(filebox.askopenfilename(title="Select an image to open")),
-               "Set glass z-height": lambda: None,
-               "Set blur radius": lambda: None,
-              }
+    options = {
+        "2025 by rgzz666": lambda: webbrowser.open("https://github.com/totowang-hhh"),
+        "This is a basic implemention using old method": None, 
+        "switch to demo 2 or 3 for latest result": None,
+        "Load image": lambda: change_image(\
+            filebox.askopenfilename(title="Select an image to open")),
+        }
     if option_buttons in [[], "", 0, False, None]:
         option_buttons = []
         for option_index in range(len(options.keys())):
@@ -349,6 +281,8 @@ win = pygame.display.set_mode(size=(1280,720))
 pygame.display.set_caption("Apple Glass Reflection Effect Demo")
 SCREEN_SIZE = pygame.display.list_modes()[0]
 loop_events = []
+
+# Instructions
 
 option_buttons = draw_options(win, [])
 
