@@ -1,4 +1,3 @@
-cd ..
 echo Building executables...
 pyinstaller -i ./icons/icon1.ico --noconfirm -w demo1.py
 pyinstaller -i ./icons/icon2.ico --noconfirm -w demo2.py
