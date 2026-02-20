@@ -109,22 +109,22 @@ class LiquidGlass():
         parent_size = self.parent.get_size()
         if self.x < 0 or self.x + self.w > parent_size[0]:
             crop_w = min(
-                self.w + self.x,  # Out of left bound
+                self.w - -self.x,  # Out of left bound
                 self.w - ((self.w + self.x) - parent_size[0]) # Out of right bound
                 )
-            if crop_w < 0: # Totally out of parent bound
+            if crop_w <= 0: # Totally out of parent bound
                 return # Skip rendering
         else:
             crop_w = self.w
         if self.y < 0 or self.y + self.h > parent_size[1]:
             crop_h = min(
-                self.h + self.y,  # Out of left bound
-                self.h - ((self.h + self.y) - parent_size[1]) # Out of right bound
+                self.h - -self.y,  # Out of upper bound
+                self.h - ((self.h + self.y) - parent_size[1]) # Out of lower bound
                 )
-            if crop_h < 0: # Totally out of parent bond
+            if crop_h <= 0: # Totally out of parent bond
                 return # Skip rendering
         else:
-            crop_h = self.w
+            crop_h = self.h
         if crop_w != self.w or crop_h != self.h:
             # Out of parent bound, needs crop on background
             crop_rect = pygame.Rect(max(0, self.x), max(0, self.y), crop_w, crop_h)
