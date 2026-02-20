@@ -239,7 +239,7 @@ class LiquidGlassButton(LiquidGlass):
             font = pygame.font.SysFont(self.font[0], self.font[1])
             surface = font.render(self.text, True, self.text_color)
             text_x = self.x + (self.w - surface.get_size()[0]) // 2
-            text_y = self.y + (self.w - surface.get_size()[1]) // 2
+            text_y = self.y + (self.h - surface.get_size()[1]) // 2
             self.parent.blit(surface, (text_x, text_y))
 
 
